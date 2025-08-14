@@ -15,7 +15,6 @@ import {
 } from '@nestjs/swagger';
 import { WalletVerificationService } from './services/wallet-verification.service';
 import { GetNonceDto, VerifyWalletDto } from './dto/wallet-nonce.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Wallet Verification')
 @Controller('auth/wallet')
@@ -71,8 +70,6 @@ export class WalletController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '检查钱包连接状态' })
   @ApiResponse({ 
     status: 200, 

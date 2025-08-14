@@ -102,6 +102,9 @@ export class WalletVerificationService {
         where: { id: nonceRecord.id },
       });
 
+      // 创建或更新VibeUser记录
+      await this.createOrUpdateVibeUser(walletAddress.toLowerCase());
+
       this.logger.log(`Wallet signature verified for ${walletAddress}`);
 
       return {
@@ -148,6 +151,74 @@ export class WalletVerificationService {
    */
   private generateRandomNonce(): string {
     return ethers.hexlify(ethers.randomBytes(16)).substring(2); // 移除0x前缀
+  }
+
+  /**
+   * 创建或更新VibeUser记录
+   */
+  private async createOrUpdateVibeUser(walletAddress: string) {
+    let vibeUser = await this.prisma.vibeUser.findFirst({
+      where: { walletAddress },
+    });
+
+    if (!vibeUser) {
+      // 创建新的VibeUser记录
+      vibeUser = await this.prisma.vibeUser.create({
+        data: {
+          id: createId(),
+          walletAddress,
+          walletConnected: true,
+          walletVerifiedAt: new Date(),
+        },
+      });
+      this.logger.log(`Created new VibeUser for wallet ${walletAddress}`);
+    } else {
+      // 更新现有记录的钱包连接状态
+      vibeUser = await this.prisma.vibeUser.update({
+        where: { id: vibeUser.id },
+        data: {
+          walletConnected: true,
+          walletVerifiedAt: new Date(),
+        },
+      });
+      this.logger.log(`Updated wallet connection status for VibeUser ${vibeUser.id}`);
+    }
+
+    // 检查是否所有连接都完成
+    await this.checkAndUpdateAllConnected(vibeUser.id);
+
+    return vibeUser;
+  }
+
+  /**
+   * 检查并更新用户的全连接状态
+   */
+  private async checkAndUpdateAllConnected(vibeUserId: string) {
+    const user = await this.prisma.vibeUser.findUnique({
+      where: { id: vibeUserId },
+      select: {
+        discordConnected: true,
+        twitterConnected: true,
+        walletConnected: true,
+        allConnected: true,
+      },
+    });
+
+    if (!user) return;
+
+    const allConnected = user.discordConnected && user.twitterConnected && user.walletConnected;
+
+    if (allConnected && !user.allConnected) {
+      await this.prisma.vibeUser.update({
+        where: { id: vibeUserId },
+        data: {
+          allConnected: true,
+          completedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`User ${vibeUserId} completed all connections!`);
+    }
   }
 
   /**

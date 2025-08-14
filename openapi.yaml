@@ -815,9 +815,19 @@ paths:
       tags:
         - Discord Integration
       summary: 启动Discord OAuth授权流程
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Wallet address to bind Discord account to
       responses:
         '302':
           description: Redirect to Discord OAuth page
+        '400':
+          description: Wallet address is required
 
   /auth/discord/callback:
     get:

@@ -16,10 +16,10 @@ export class DiscordService {
   /**
    * 获取Discord OAuth URL
    */
-  getOAuthUrl(): string {
+  getOAuthUrl(walletAddress?: string): string {
     const clientId = this.configService.get<string>('DISCORD_CLIENT_ID');
     const redirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
-    const state = this.generateState();
+    const state = this.generateState(walletAddress);
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -105,26 +105,26 @@ export class DiscordService {
     discordId: string, 
     username: string, 
     isInGuild: boolean,
-    vibeUserId?: string
+    walletAddress?: string
   ) {
-    // 查找或创建VibeUser
-    let vibeUser = await this.prisma.vibeUser.findFirst({
-      where: vibeUserId ? { id: vibeUserId } : { discordId },
-    });
+    let vibeUser;
 
-    if (!vibeUser) {
-      // 创建新用户
-      vibeUser = await this.prisma.vibeUser.create({
-        data: {
-          id: require('@paralleldrive/cuid2').createId(),
-          discordId,
-          discordUsername: username,
-          discordConnected: true,
-          isJoined: isInGuild,
+    if (walletAddress) {
+      // 根据钱包地址查找用户，并确保钱包已验证连接
+      vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { 
+          walletAddress: walletAddress.toLowerCase(),
+          walletConnected: true, // 必须钱包已验证连接
         },
       });
-    } else {
-      // 更新现有用户
+
+      if (!vibeUser) {
+        throw new BadRequestException(
+          `No verified wallet connection found for address: ${walletAddress}. Please connect and verify your wallet first.`
+        );
+      }
+
+      // 更新现有用户的Discord信息
       vibeUser = await this.prisma.vibeUser.update({
         where: { id: vibeUser.id },
         data: {
@@ -134,6 +134,37 @@ export class DiscordService {
           isJoined: isInGuild,
         },
       });
+
+      this.logger.log(`Updated Discord connection for verified wallet ${walletAddress} -> Discord ${discordId}`);
+    } else {
+      // 原有逻辑：根据discordId查找或创建
+      vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { discordId },
+      });
+
+      if (!vibeUser) {
+        // 创建新用户
+        vibeUser = await this.prisma.vibeUser.create({
+          data: {
+            id: require('@paralleldrive/cuid2').createId(),
+            discordId,
+            discordUsername: username,
+            discordConnected: true,
+            isJoined: isInGuild,
+          },
+        });
+      } else {
+        // 更新现有用户
+        vibeUser = await this.prisma.vibeUser.update({
+          where: { id: vibeUser.id },
+          data: {
+            discordId,
+            discordUsername: username,
+            discordConnected: true,
+            isJoined: isInGuild,
+          },
+        });
+      }
     }
 
     // 检查是否所有连接都完成
@@ -222,8 +253,35 @@ export class DiscordService {
   /**
    * 生成OAuth state参数
    */
-  private generateState(): string {
-    return Math.random().toString(36).substring(2, 15);
+  private generateState(walletAddress?: string): string {
+    const randomState = Math.random().toString(36).substring(2, 15);
+    if (walletAddress) {
+      // 将钱包地址编码到state中
+      const encodedAddress = Buffer.from(walletAddress).toString('base64');
+      return `${randomState}_${encodedAddress}`;
+    }
+    return randomState;
+  }
+
+  /**
+   * 从state中提取钱包地址
+   */
+  extractWalletAddressFromState(state?: string): string | undefined {
+    if (!state || !state.includes('_')) {
+      return undefined;
+    }
+
+    try {
+      const parts = state.split('_');
+      if (parts.length >= 2) {
+        const encodedAddress = parts.slice(1).join('_'); // 处理地址中可能包含下划线的情况
+        return Buffer.from(encodedAddress, 'base64').toString();
+      }
+    } catch (error) {
+      this.logger.warn('Failed to decode wallet address from state:', error.message);
+    }
+
+    return undefined;
   }
 
   /**

@@ -23,14 +23,53 @@ import { SocialConnectionStatusDto } from '../dto/social-oauth.dto';
 export class DiscordController {
   constructor(private readonly discordService: DiscordService) {}
 
+  @Get('oauth-url')
+  @ApiOperation({ summary: '获取Discord OAuth授权链接' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'OAuth URL generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        oauthUrl: { type: 'string', example: 'https://discord.com/api/oauth2/authorize?...' },
+        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' }
+      }
+    }
+  })
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: true,
+    description: 'Wallet address to bind Discord account to',
+    example: '0x1234567890123456789012345678901234567890'
+  })
+  getOAuthUrl(@Query('walletAddress') walletAddress: string) {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+    const url = this.discordService.getOAuthUrl(walletAddress);
+    return {
+      oauthUrl: url,
+      walletAddress: walletAddress
+    };
+  }
+
   @Get('oauth')
-  @ApiOperation({ summary: '启动Discord OAuth授权流程' })
+  @ApiOperation({ summary: '启动Discord OAuth授权流程（直接重定向）' })
   @ApiResponse({ 
     status: 302, 
     description: 'Redirect to Discord OAuth page' 
   })
-  startOAuth(@Res() res) {
-    const url = this.discordService.getOAuthUrl();
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: true,
+    description: 'Wallet address to bind Discord account to',
+    example: '0x1234567890123456789012345678901234567890'
+  })
+  startOAuth(@Query('walletAddress') walletAddress: string, @Res() res) {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+    const url = this.discordService.getOAuthUrl(walletAddress);
     return res.redirect(url);
   }
 
@@ -63,11 +102,13 @@ export class DiscordController {
 
     const result = await this.discordService.handleOAuthCallback(code, state);
     
-    // 更新用户连接状态
+    // 从state中获取walletAddress并更新用户连接状态
+    const walletAddress = this.discordService.extractWalletAddressFromState(state);
     await this.discordService.updateDiscordConnection(
       result.discordId,
       `${result.username}#${result.discriminator}`,
       result.isInGuild,
+      walletAddress,
     );
 
     return {
@@ -75,6 +116,7 @@ export class DiscordController {
       discordId: result.discordId,
       username: `${result.username}#${result.discriminator}`,
       isInGuild: result.isInGuild,
+      walletAddress: walletAddress,
       message: result.isInGuild 
         ? 'Discord connection successful! You are a member of the 0G Discord server.' 
         : 'Discord connection successful! Please join the 0G Discord server to complete verification.',
