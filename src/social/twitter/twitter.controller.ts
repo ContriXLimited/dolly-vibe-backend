@@ -1,0 +1,130 @@
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Redirect,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { TwitterService } from './twitter.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { SocialConnectionStatusDto } from '../dto/social-oauth.dto';
+
+@ApiTags('Twitter Integration')
+@Controller('auth/twitter')
+export class TwitterController {
+  constructor(private readonly twitterService: TwitterService) {}
+
+  @Get('oauth')
+  @ApiOperation({ summary: '启动Twitter OAuth授权流程' })
+  @ApiResponse({ 
+    status: 302, 
+    description: 'Redirect to Twitter OAuth page' 
+  })
+  @Redirect()
+  async startOAuth() {
+    const url = await this.twitterService.getOAuthUrl();
+    return { url };
+  }
+
+  @Get('callback')
+  @ApiOperation({ summary: 'Twitter OAuth回调处理' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Twitter OAuth completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        twitterId: { type: 'string', example: '123456789' },
+        username: { type: 'string', example: 'dollyuser' },
+        displayName: { type: 'string', example: 'Dolly User' },
+        isFollowingDolly: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Twitter connection successful' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'OAuth callback failed' })
+  @ApiQuery({ name: 'oauth_token', description: 'Twitter OAuth token' })
+  @ApiQuery({ name: 'oauth_verifier', description: 'Twitter OAuth verifier' })
+  async handleCallback(
+    @Query('oauth_token') oauthToken: string,
+    @Query('oauth_verifier') oauthVerifier: string,
+  ) {
+    if (!oauthToken || !oauthVerifier) {
+      throw new BadRequestException('Missing OAuth parameters');
+    }
+
+    const result = await this.twitterService.handleOAuthCallback(oauthToken, oauthVerifier);
+    
+    // 更新用户连接状态
+    await this.twitterService.updateTwitterConnection(
+      result.twitterId,
+      result.username,
+      result.isFollowingDolly,
+    );
+
+    return {
+      success: true,
+      twitterId: result.twitterId,
+      username: result.username,
+      displayName: result.displayName,
+      isFollowingDolly: result.isFollowingDolly,
+      message: result.isFollowingDolly 
+        ? 'Twitter connection successful! You are following Dolly.' 
+        : 'Twitter connection successful! Please follow @Dolly to complete verification.',
+    };
+  }
+
+  @Get('status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '检查Twitter连接状态' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Twitter status retrieved successfully',
+    type: SocialConnectionStatusDto
+  })
+  @ApiQuery({ 
+    name: 'twitterId', 
+    required: false,
+    description: 'Twitter user ID to check status for' 
+  })
+  async getTwitterStatus(@Query('twitterId') twitterId?: string) {
+    if (!twitterId) {
+      throw new BadRequestException('Twitter ID is required');
+    }
+
+    return this.twitterService.checkTwitterStatus(twitterId);
+  }
+
+  @Get('dolly-profile')
+  @ApiOperation({ summary: '获取Dolly Twitter资料链接' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Dolly Twitter profile info',
+    schema: {
+      type: 'object',
+      properties: {
+        profileUrl: { type: 'string', example: 'https://twitter.com/DollyAI' },
+        username: { type: 'string', example: 'DollyAI' },
+        displayName: { type: 'string', example: 'Dolly - AI Assistant' }
+      }
+    }
+  })
+  getDollyProfile() {
+    // 返回Dolly的Twitter资料信息
+    return {
+      profileUrl: 'https://twitter.com/DollyAI', // 替换为实际的Twitter账号
+      username: 'DollyAI',
+      displayName: 'Dolly - AI Assistant',
+    };
+  }
+}

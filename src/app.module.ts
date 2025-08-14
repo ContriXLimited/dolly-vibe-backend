@@ -4,6 +4,8 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { VibeUserModule } from './vibe-user/vibe-user.module';
+import { WalletModule } from './wallet/wallet.module';
+import { SocialModule } from './social/social.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { VibeUserModule } from './vibe-user/vibe-user.module';
     AuthModule,
     CommonModule,
     VibeUserModule,
+    WalletModule,
+    SocialModule,
   ],
 })
 export class AppModule {}

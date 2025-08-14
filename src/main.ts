@@ -33,6 +33,10 @@ async function bootstrap() {
     .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .addTag('Authentication', 'Authentication endpoints')
     .addTag('VibeUser Management', 'VibeUser CRUD operations')
+    .addTag('Wallet Verification', 'Wallet signature verification')
+    .addTag('Discord Integration', 'Discord OAuth and server verification')
+    .addTag('Twitter Integration', 'Twitter OAuth and follow verification')
+    .addTag('User Connection Status', 'User connection status management')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {

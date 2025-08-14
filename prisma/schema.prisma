@@ -561,17 +561,51 @@ model TokenRecord {
 }
 
 model VibeUser {
-  id         String          @id @db.VarChar(64)
-  discordId  String?         @db.VarChar(255)
-  twitterId  String?         @db.VarChar(255)
-  isJoined   Boolean         @default(false) // 是否加入 0G 项目方 DC
-  isFollowed Boolean         @default(false) // 是否关注 Dolly Twitter
-  createdAt  DateTime        @default(now()) // 用户创建时间
-  updatedAt  DateTime        @updatedAt // 用户更新时间
-  status     VibeUserStatus  @default(NORMAL) // 用户状态（0：正常，1：黑名单）
+  id            String  @id @db.VarChar(64)
+  discordId     String? @db.VarChar(255)
+  twitterId     String? @db.VarChar(255)
+  walletAddress String? @db.VarChar(255) // 钱包地址
+
+  // Discord 连接状态
+  discordConnected Boolean @default(false) // Discord OAuth 是否完成
+  isJoined         Boolean @default(false) // 是否加入 0G 项目方 DC
+  discordUsername  String? @db.VarChar(255) // Discord 用户名
+
+  // Twitter 连接状态
+  twitterConnected Boolean @default(false) // Twitter OAuth 是否完成
+  isFollowed       Boolean @default(false) // 是否关注 Dolly Twitter
+  twitterUsername  String? @db.VarChar(255) // Twitter 用户名
+
+  // 钱包连接状态
+  walletConnected  Boolean   @default(false) // 钱包是否已验证连接
+  walletVerifiedAt DateTime? // 钱包验证时间
+
+  // 总体状态
+  allConnected Boolean   @default(false) // 三项全部连接成功
+  completedAt  DateTime? // 全部连接完成时间
+
+  createdAt DateTime       @default(now()) // 用户创建时间
+  updatedAt DateTime       @updatedAt // 用户更新时间
+  status    VibeUserStatus @default(NORMAL) // 用户状态（0：正常，1：黑名单）
 
   @@index([discordId], map: "vibe_user_discordId_index")
   @@index([twitterId], map: "vibe_user_twitterId_index")
+  @@index([walletAddress], map: "vibe_user_walletAddress_index")
   @@index([status], map: "vibe_user_status_index")
+  @@index([allConnected], map: "vibe_user_allConnected_index")
   @@map("vibe_users")
+}
+
+// 钱包签名验证临时存储
+model WalletNonce {
+  id            String   @id @db.VarChar(64)
+  walletAddress String   @db.VarChar(255)
+  nonce         String   @db.VarChar(255)
+  message       String   @db.Text
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress], map: "wallet_nonce_address_index")
+  @@index([expiresAt], map: "wallet_nonce_expires_index")
+  @@map("wallet_nonces")
 }
