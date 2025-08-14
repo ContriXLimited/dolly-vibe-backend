@@ -55,7 +55,7 @@ export class TwitterService {
       const isFollowingDolly = await this.checkFollowingStatus(
         accessTokenData.oauth_token,
         accessTokenData.oauth_token_secret,
-        userInfo.id_str
+        userInfo.screen_name
       );
 
       return {
@@ -284,35 +284,62 @@ export class TwitterService {
   }
 
   /**
-   * 检查用户是否关注Dolly
+   * 公共方法：检查用户是否关注Dolly
+   */
+  async checkUserFollowsDolly(username: string): Promise<boolean> {
+    return this.checkFollowingStatus('', '', username);
+  }
+
+  /**
+   * 检查用户是否关注Dolly (使用twitterapi.io)
    */
   private async checkFollowingStatus(
     accessToken: string,
     accessTokenSecret: string,
-    userId: string
+    username: string
   ): Promise<boolean> {
     try {
       const dollyTwitterId = this.configService.get<string>('DOLLY_TWITTER_ID');
+      const twitterApiKey = this.configService.get<string>('TWITTER_API_IO_KEY');
       
       if (!dollyTwitterId) {
         this.logger.warn('DOLLY_TWITTER_ID not configured');
         return false;
       }
 
-      // 使用Twitter API检查关注关系
-      // 由于Twitter API v2的限制，这里使用第三方API或者简化处理
-      
-      // 实际实现时可以使用:
-      // 1. Twitter API v2 的 following endpoint
-      // 2. 第三方服务如 twitterapi.io
-      
-      // 临时实现：返回false，需要手动验证
-      this.logger.log(`Checking if user ${userId} follows Dolly (${dollyTwitterId})`);
-      
-      return false; // 需要实际实现API调用
+      if (!twitterApiKey) {
+        this.logger.warn('TWITTER_API_IO_KEY not configured, skipping follow check');
+        return false;
+      }
+
+      this.logger.log(`Checking if user ${username} follows Dolly (${dollyTwitterId}) using twitterapi.io`);
+
+      // 使用twitterapi.io检查关注关系
+      const url = 'https://api.twitterapi.io/twitter/user/check_follow_relationship';
+      const response = await axios.get(url, {
+        headers: {
+          'X-API-Key': twitterApiKey,
+        },
+        params: {
+          source_user_name: username,
+          target_user_name: dollyTwitterId,
+        },
+      });
+
+      if (response.data.status === 'success' && response.data.data) {
+        const isFollowing = response.data.data.following === true;
+        this.logger.log(`Follow check result for ${username} -> ${dollyTwitterId}: ${isFollowing}`);
+        return isFollowing;
+      } else {
+        this.logger.warn('TwitterAPI.io response error:', response.data.message || 'Unknown error');
+        return false;
+      }
 
     } catch (error) {
       this.logger.error('Error checking Twitter following status:', error.message);
+      if (error.response?.data) {
+        this.logger.error('TwitterAPI.io error response:', JSON.stringify(error.response.data));
+      }
       return false;
     }
   }

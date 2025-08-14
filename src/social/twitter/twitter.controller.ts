@@ -16,11 +16,15 @@ import {
 import { TwitterService } from './twitter.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SocialConnectionStatusDto } from '../dto/social-oauth.dto';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Twitter Integration')
 @Controller('auth/twitter')
 export class TwitterController {
-  constructor(private readonly twitterService: TwitterService) {}
+  constructor(
+    private readonly twitterService: TwitterService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('oauth-url')
   @ApiOperation({ summary: '获取Twitter OAuth授权链接' })
@@ -155,6 +159,44 @@ export class TwitterController {
     return this.twitterService.checkTwitterStatus(twitterId);
   }
 
+  @Get('check-follow')
+  @ApiOperation({ summary: '检查用户是否关注Dolly' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Follow status checked successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        isFollowing: { type: 'boolean', example: true },
+        sourceUser: { type: 'string', example: 'username123' },
+        targetUser: { type: 'string', example: 'AskDollyToday' },
+        message: { type: 'string', example: 'Follow status checked successfully' }
+      }
+    }
+  })
+  @ApiQuery({ 
+    name: 'username', 
+    required: true,
+    description: 'Twitter username to check (without @)' 
+  })
+  async checkFollowStatus(@Query('username') username: string) {
+    if (!username) {
+      throw new BadRequestException('Username is required');
+    }
+
+    const isFollowing = await this.twitterService.checkUserFollowsDolly(username);
+    const dollyTwitterId = this.configService.get<string>('DOLLY_TWITTER_ID') || 'AskDollyToday';
+    
+    return {
+      isFollowing,
+      sourceUser: username,
+      targetUser: dollyTwitterId,
+      message: isFollowing 
+        ? `@${username} is following @${dollyTwitterId}` 
+        : `@${username} is not following @${dollyTwitterId}`,
+    };
+  }
+
   @Get('dolly-profile')
   @ApiOperation({ summary: '获取Dolly Twitter资料链接' })
   @ApiResponse({ 
@@ -163,18 +205,18 @@ export class TwitterController {
     schema: {
       type: 'object',
       properties: {
-        profileUrl: { type: 'string', example: 'https://twitter.com/DollyAI' },
-        username: { type: 'string', example: 'DollyAI' },
-        displayName: { type: 'string', example: 'Dolly - AI Assistant' }
+        profileUrl: { type: 'string', example: 'https://twitter.com/AskDollyToday' },
+        username: { type: 'string', example: 'AskDollyToday' },
+        displayName: { type: 'string', example: 'Ask Dolly Today' }
       }
     }
   })
   getDollyProfile() {
-    // 返回Dolly的Twitter资料信息
+    const dollyTwitterId = this.configService.get<string>('DOLLY_TWITTER_ID') || 'AskDollyToday';
     return {
-      profileUrl: 'https://twitter.com/DollyAI', // 替换为实际的Twitter账号
-      username: 'DollyAI',
-      displayName: 'Dolly - AI Assistant',
+      profileUrl: `https://twitter.com/${dollyTwitterId}`,
+      username: dollyTwitterId,
+      displayName: 'Ask Dolly Today',
     };
   }
 }
