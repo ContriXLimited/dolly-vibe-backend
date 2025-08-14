@@ -7,21 +7,571 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
+enum ProjectRoleType {
+  USER // User
+  STAFF // Staff
+}
+
+enum ProjectStatus {
+  NORMAL // Normal
+  DISABLED // Disabled
+  DELETED // Deleted
+}
+
+enum Platform {
+  DISCORD // Discord
+  TELEGRAM // Telegram
+}
+
+enum UserType {
+  USER // User
+  STAFF // Staff
+}
+
+enum UserStatus {
+  NORMAL // Normal
+  BLACKLIST // Blacklisted
+}
+
+enum AuthorType {
+  USER // User
+  STAFF // Staff
+}
+
+enum Sentiment {
+  UNTAGGED // Untagged
+  POSITIVE // Positive
+  NEUTRAL // Neutral
+  NEGATIVE // Negative
+}
+
+enum QuestionType {
+  QA // QA
+  SOP // SOP
+}
+
+enum QuestionState {
+  IN_PROGRESS // In progress
+  RESOLVED // Resolved
+  MANUAL_INTERVENTION // Manual intervention (unresolved)
+  MANUAL_INTERVENTION_RESOLVED // Resolved after manual intervention
+}
+
+enum InteractionType {
+  NONE // None
+  THUMBS_UP // 👍🏻
+  THUMBS_DOWN // 👎🏻
+}
+
+enum ExecutionType {
+  NORMAL_CONVERSATION // Normal conversation
+  SOP_CONVERSATION // SOP conversation
+}
+
+enum ExecutionState {
+  EXECUTING // Executing
+  // THINKING // Thinking
+  REPLIED // Replied
+  INTERRUPTED // Interrupted
+  IGNORED // Ignored
+  BLOCKED // Blocked
+  RECALLED // Recalled
+}
+
+enum TaskStatus {
+  PENDING // Pending
+  SUCCESS // Success
+  FAILED // Failed
+  RUNNING // Running
+}
+
+enum TaskType {
+  DEFAULT // 0 默认
+  CRAWLER // 1 爬虫
+  SYNC // 2 同步
+  SCHEDULE // 3 定时
+}
+
+enum TaskFrequency {
+  DAILY // 1 每日
+  WEEKLY // 2 每周
+  MONTHLY // 3 每月
+}
+
+enum TaskExecutionType {
+  CRAWLER_SERVICE // 外部爬虫服务（LINK类型）
+  NATIVE_API_CALL // 直接调用原生API（TWITTER/DISCORD类型）
+}
+
+enum FileMappingStatus {
+  PENDING // Pending
+  SUCCESS // Success
+  FAILED // Failed
+}
+
+enum KnowledgeStatus {
+  PENDING // Pending
+  PROCESSING // Processing
+  PROCESSED // Processed
+}
+
+enum KnowledgeType {
+  LINK // Link
+  DISCORD // Discord
+  TELEGRAM // Telegram
+  TWITTER // Twitter
+  FILE // File
+}
+
+enum ClientStatus {
+  NORMAL // Normal
+  DISABLED // Disabled
+  DELETED // Deleted
+}
+
+enum ClientProjectRole {
+  OWNER // Owner
+  ADMIN // Admin
+  USER // User
+  DEV // Dev
+}
+
+enum PaymentStatus {
+  PENDING // Pending
+  WAITING // Waiting for payment
+  CONFIRMING // Confirming
+  CONFIRMED // Confirmed
+  SENDING // Sending
+  PARTIALLY_PAID // Partially paid
+  FINISHED // Finished
+  FAILED // Failed
+  REFUNDED // Refunded
+  EXPIRED // Expired
+}
+
+enum VIPLimitation {
+  AI_ANSWERS // 0 AI 回复次数
+  KNOWLEDGE // 1 Knowledge 页面内可配置的 Knowledge 个数
+  CHANNEL // 2 可配置的 Readable 频道个数
+  SOP // 3 可配置的 SOP 个数
+  CUSTOM_WORKFLOW // 4 为项目方定制开发工作流
+  TRANSFER_SERVER // 5 DC Guild、TG Chat 等平台的迁移次数
+}
+
+enum TokenChangeType {
+  // 消耗场景
+  AI_ANSWERS // 0 AI 回复次数（只有回复的才算）
+  REFRESH_TOPICS // 1 刷新 Topics 和 Questions
+  KNOWLEDGE_SYNC // 2 每个 Knowledge 的每一次同步收费（默认每周一次）
+  CHANNEL_SYNC // 3 每个 Readable 频道的每一次同步收费（默认每周一次）
+  PROFILE_UPDATE // 4 用户画像的每一次更新收费（可设置最大值）
+  CUSTOM_WORKFLOW // 5 为项目方定制开发工作流（需人工处理）
+  TRANSFER_SERVER // 6 不同项目的迁移次数（需人工处理）
+  OTHER // 7 其他消耗情况
+
+  // 增加场景
+  VIP_GRANT // 10 VIP等级赠送
+  REWARD // 11 奖励
+  PURCHASE // 12 购买
+}
+
+enum PromptTemplateType {
+  JUDGE_REPLY // 判断回复
+  GENERATE_REPLY // 生成回复
+  GENERATE_SOP_REPLY // 生成 SOP 回复
+  CORRECT_REPLY // 修正回复
+
+  GENERATE_PROFILE // 生成个人资料
+
+  JUDGE_QUESTION // 判断问题
+  UPDATE_QUESTION // 更新问题
+
+  SENTIMENT_ANALYSIS // 情感分析
+  TOPICS_QUESTIONS // 话题问题提取
+}
+
+enum VibeUserStatus {
+  NORMAL // 正常
+  BLACKLIST // 黑名单
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  avatar    String?
-  role      Role     @default(USER)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @db.VarChar(64)
+  platform   Platform?   @default(DISCORD)
+  platformId String?     @db.VarChar(255)
+  projectId  String?     @db.VarChar(64)
+  type       UserType?   @default(USER)
+  name       String?     @db.VarChar(255)
+  profile    String?     @db.Text
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deletedAt  DateTime?
+  status     UserStatus? @default(NORMAL)
+  roleIds    String?     @db.Text
 
   @@map("users")
 }
 
-enum Role {
-  USER
-  ADMIN
+model Project {
+  id           String         @id @db.VarChar(64)
+  name         String         @db.VarChar(255)
+  introduction String?        @db.Text
+  contacts     String?        @db.Text
+  resourceId   String?        @db.VarChar(255)
+  docs         String?        @db.LongText
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+  status       ProjectStatus? @default(NORMAL)
+
+  // Discord configuration
+  guildId         String? @db.VarChar(255)
+  readChannelIds  String? @db.Text
+  writeChannelIds String? @db.Text
+  ticketChannelId String? @db.VarChar(255)
+
+  // Telegram configuration
+  tgChatId       String? @db.VarChar(255) // Telegram Group ID
+  readThreadIds  String? @db.Text // JSON array of topic IDs for reading
+  writeThreadIds String? @db.Text // JSON array of topic IDs for writing
+  threadNames    String? @db.Text // JSON array of thread names
+
+  workflowId   String? @db.VarChar(255)
+  roles        String? @db.Text
+  blacklist    String? @db.Text
+  links        String? @db.Text
+  topTopics    String? @db.Text
+  topQuestions String? @db.Text
+
+  // Token system
+  isTestProject Boolean @default(false) // 是否为内部测试项目
+
+  @@map("projects")
+}
+
+model Question {
+  id          String           @id @db.VarChar(64)
+  question    String?          @db.Text
+  platform    Platform?        @default(DISCORD)
+  projectId   String?          @db.VarChar(64)
+  userId      String?          @db.VarChar(64)
+  sopId       String?          @db.VarChar(64)
+  channelId   String?          @db.VarChar(255)
+  messageIds  String?          @db.Text // JSON array of message IDs
+  memory      String?          @db.Text
+  interaction InteractionType? @default(NONE)
+  state       QuestionState?   @default(IN_PROGRESS)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  @@map("questions")
+}
+
+model QA {
+  id        String   @id @db.VarChar(64)
+  projectId String?  @db.VarChar(64)
+  questions String?  @db.Text
+  answer    String?  @db.Text
+  prompt    String?  @db.Text
+  type      String?  @db.VarChar(255)
+  note      String?  @db.Text
+  enabled   Boolean? @default(true)
+  name      String?  @db.VarChar(255)
+
+  requestCount Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@map("qas")
+}
+
+model SOP {
+  id         String    @id @db.VarChar(64)
+  projectId  String?   @db.VarChar(64)
+  questions  String?   @db.Text
+  steps      String?   @db.Text
+  workflowId String?   @db.VarChar(255)
+  prompt     String?   @db.Text
+  type       String?   @db.VarChar(255)
+  note       String?   @db.Text
+  enabled    Boolean?  @default(true)
+  name       String?   @db.VarChar(255)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@map("sops")
+}
+
+model Execution {
+  id          String           @id @db.VarChar(64)
+  projectId   String?          @db.VarChar(64)
+  messageId   String?          @db.VarChar(255)
+  message     String?          @db.Text
+  reply       String?          @db.Text
+  userId      String?          @db.VarChar(64)
+  type        ExecutionType?   @default(NORMAL_CONVERSATION)
+  state       ExecutionState?  @default(EXECUTING)
+  interaction InteractionType? @default(NONE)
+  workflowId  String?          @db.VarChar(255)
+  likes       Int              @default(0)
+  dislikes    Int              @default(0)
+  createdAt   DateTime         @default(now())
+  repliedAt   DateTime?
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  @@map("executions")
+}
+
+model ExecutionFeedback {
+  id          String   @id @db.VarChar(64)
+  executionId String   @db.VarChar(64)
+  platform    String?  @db.VarChar(64)
+  userId      String   @db.VarChar(64)
+  isLike      Boolean? @default(true)
+  channelId   String?  @db.VarChar(255)
+  messageId   String?  @db.VarChar(255)
+  guildId     String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+
+  @@unique([executionId, userId])
+  @@map("execution_feedbacks")
+}
+
+model Client {
+  id           String       @id @db.VarChar(64)
+  email        String       @unique @db.VarChar(255)
+  passwordHash String       @db.VarChar(255)
+  username     String?      @db.VarChar(100)
+  avatar       String?      @db.VarChar(255)
+  discordId    String?      @unique @db.VarChar(255)
+  telegramId   String?      @unique @db.VarChar(255)
+  status       ClientStatus @default(NORMAL)
+  lastLoginAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+
+  @@map("clients")
+}
+
+model ClientProject {
+  clientId  String            @db.VarChar(64)
+  projectId String            @db.VarChar(64)
+  role      ClientProjectRole @default(USER)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  deletedAt DateTime?
+
+  @@id([clientId, projectId])
+  @@map("client_projects")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model FileMapping {
+  id              String             @id @db.VarChar(64)
+  fileName        String             @db.VarChar(255)
+  fileDescription String?            @db.Text
+  docId           String?            @db.VarChar(255)
+  status          FileMappingStatus? @default(PENDING)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+
+  @@map("file_mapping")
+}
+
+model Message {
+  id         String      @id @db.VarChar(64)
+  platform   Platform?   @default(DISCORD)
+  channelId  String?     @db.VarChar(255)
+  authorId   String?     @db.VarChar(255)
+  projectId  String?     @db.VarChar(64)
+  authorType AuthorType? @default(USER)
+  message    String?     @db.Text
+  docId      String?     @db.VarChar(255)
+  sentiment  Sentiment?  @default(UNTAGGED)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deletedAt  DateTime?
+
+  @@map("messages")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Task {
+  id            String             @id @db.VarChar(64)
+  url           String?            @db.VarChar(2048)
+  projectId     String             @db.VarChar(64)
+  startTime     DateTime?
+  status        TaskStatus         @default(PENDING)
+  type          TaskType?          @default(DEFAULT) // 任务类型
+  frequency     TaskFrequency? // 定时任务频率
+  knowledgeId   String?            @db.VarChar(64) // 单个文档任务 Id
+  executionType TaskExecutionType? @default(CRAWLER_SERVICE) // 任务执行类型
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+
+  @@index([createdAt], map: "idx_created_at")
+  @@index([projectId], map: "idx_project_id")
+  @@index([startTime], map: "idx_start_time")
+  @@index([status], map: "idx_status")
+  @@index([type], map: "idx_type")
+  @@index([frequency], map: "idx_frequency")
+  @@index([knowledgeId], map: "idx_knowledgeId")
+  @@map("tasks")
+}
+
+model Knowledge {
+  id           String          @id @db.VarChar(64)
+  projectId    String          @db.VarChar(64)
+  status       KnowledgeStatus @default(PENDING)
+  creatorId    String          @db.VarChar(64)
+  type         KnowledgeType   @default(LINK)
+  name         String?         @db.VarChar(255) // Display name for files/links
+  content      String          @db.Text // Source description, determined by type: file OSS link, web link, or channelId
+  requestCount Int             @default(0) // Request count
+  resourceId   String?         @db.VarChar(255)
+  docs         String?         @db.Text
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+
+  @@index([projectId], map: "knowledge_projectId_index")
+  @@index([creatorId], map: "knowledge_creatorId_index")
+  @@map("knowledge")
+}
+
+model Payment {
+  id             String        @id @db.VarChar(255) // System generated payment ID (Primary Key)
+  invoiceId      String?       @unique @db.VarChar(255) // NOWPayments invoice ID
+  paymentId      String?       @unique @db.VarChar(255) // NOWPayments payment ID (generated after payment)
+  clientId       String        @db.VarChar(64) // Client who made the payment
+  projectId      String        @db.VarChar(64) // Related project
+  amount         Decimal       @db.Decimal(20, 8) // Payment amount
+  currency       String        @db.VarChar(10) // Payment currency (USD, EUR, etc.)
+  payAmount      Decimal?      @db.Decimal(20, 8) // Amount to pay in crypto
+  payCurrency    String?       @db.VarChar(20) // Cryptocurrency used for payment
+  payAddress     String?       @db.VarChar(255) // Payment address
+  status         PaymentStatus @default(PENDING)
+  description    String?       @db.Text // Payment description
+  returnUrl      String?       @db.VarChar(500) // Return URL after payment
+  successUrl     String?       @db.VarChar(500) // Success URL
+  cancelUrl      String?       @db.VarChar(500) // Cancel URL
+  ipnCallbackUrl String?       @db.VarChar(500) // IPN callback URL
+  metadata       String?       @db.Text // Additional metadata (JSON)
+  expiresAt      DateTime? // Payment expiration time
+  confirmedAt    DateTime? // Payment confirmation time
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  @@index([clientId], map: "payment_clientId_index")
+  @@index([projectId], map: "payment_projectId_index")
+  @@index([status], map: "payment_status_index")
+  @@index([id], map: "payment_id_index")
+  @@map("payments")
+}
+
+model PaymentTransaction {
+  id            String        @id @db.VarChar(64)
+  paymentId     String        @db.VarChar(64) // Related payment
+  txHash        String?       @db.VarChar(255) // Transaction hash
+  blockNumber   String?       @db.VarChar(255) // Block number
+  confirmations Int? // Number of confirmations
+  amount        Decimal       @db.Decimal(20, 8) // Transaction amount
+  currency      String        @db.VarChar(20) // Transaction currency
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([paymentId], map: "payment_transaction_paymentId_index")
+  @@index([txHash], map: "payment_transaction_txHash_index")
+  @@map("payment_transactions")
+}
+
+model VIPTier {
+  id            Int      @id // ID同时表示优先级，越大等级越高
+  name          String   @db.VarChar(100) // 等级名称 (Starter, Professional, Enterprise)
+  description   String?  @db.Text // 描述
+  monthlyPrice  Int      @default(-1) // 按月价格（-1表示无法直接开通）
+  annuallyPrice Int      @default(-1) // 按年价格（-1表示无法直接开通）
+  limitations   String   @db.Text // JSON array: 每项权益的限制数量（-1无穷，-2待定）
+  visible       Boolean  @default(true) // 是否可见
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("vip_tiers")
+}
+
+model VIPRecord {
+  id        String   @id @db.VarChar(64)
+  projectId String   @db.VarChar(64) // 项目ID
+  tierId    Int // VIP等级ID
+  startAt   DateTime @default(now()) // 开始时间
+  endAt     DateTime // 结束时间
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId], map: "vip_record_projectId_index")
+  @@index([tierId], map: "vip_record_tierId_index")
+  @@index([startAt], map: "vip_record_startAt_index")
+  @@index([endAt], map: "vip_record_endAt_index")
+  @@map("vip_records")
+}
+
+model PromptTemplate {
+  id            String             @id @db.VarChar(64)
+  name          String?            @db.VarChar(255)
+  description   String?            @db.Text
+  type          PromptTemplateType
+  version       String             @db.VarChar(64)
+  systemMessage String?            @db.Text
+  userMessage   String?            @db.Text
+  outputFormat  String?            @db.Text
+  isJsonSchema  Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([type], map: "prompt_template_type_index")
+  @@index([name], map: "prompt_template_name_index")
+  @@index([version], map: "prompt_template_version_index")
+  @@map("prompt_templates")
+}
+
+model TokenRecord {
+  id        String          @id @db.VarChar(64)
+  projectId String          @db.VarChar(64)
+  type      TokenChangeType
+  reason    String?         @db.Text
+  amount    Int // 正数=增加，负数=消耗
+  expiresAt DateTime? // 赠送Token的过期时间（null表示永久）
+  sourceId  String?         @db.VarChar(64) // VIP记录ID或支付ID
+  createdAt DateTime        @default(now())
+
+  @@index([projectId, createdAt], map: "token_record_project_created_index")
+  @@index([projectId, expiresAt], map: "token_record_project_expires_index")
+  @@index([projectId, type], map: "token_record_project_type_index")
+  @@map("token_records")
+}
+
+model VibeUser {
+  id         String          @id @db.VarChar(64)
+  discordId  String?         @db.VarChar(255)
+  twitterId  String?         @db.VarChar(255)
+  isJoined   Boolean         @default(false) // 是否加入 0G 项目方 DC
+  isFollowed Boolean         @default(false) // 是否关注 Dolly Twitter
+  createdAt  DateTime        @default(now()) // 用户创建时间
+  updatedAt  DateTime        @updatedAt // 用户更新时间
+  status     VibeUserStatus  @default(NORMAL) // 用户状态（0：正常，1：黑名单）
+
+  @@index([discordId], map: "vibe_user_discordId_index")
+  @@index([twitterId], map: "vibe_user_twitterId_index")
+  @@index([status], map: "vibe_user_status_index")
+  @@map("vibe_users")
 }

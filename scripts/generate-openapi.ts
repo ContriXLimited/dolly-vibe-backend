@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import { AppModule } from '../src/app.module';
+import { ValidationPipe } from '@nestjs/common';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 
-async function bootstrap() {
+async function generateOpenAPI() {
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
@@ -14,17 +16,13 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
-
   const config = new DocumentBuilder()
     .setTitle('Dolly Vibe API')
     .setDescription('The Dolly Vibe API documentation with VibeUser management, authentication, and more')
     .setVersion('1.0')
     .addBearerAuth()
     .addServer('http://localhost:3000', 'Development server')
+    .addServer('https://api.dollyvibe.com', 'Production server')
     .setContact(
       'Dolly Vibe Team',
       'https://dollyvibe.com',
@@ -34,16 +32,30 @@ async function bootstrap() {
     .addTag('Authentication', 'Authentication endpoints')
     .addTag('VibeUser Management', 'VibeUser CRUD operations')
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
+
+  // Generate YAML file
+  const yamlString = yaml.dump(document, {
+    indent: 2,
+    lineWidth: 120,
+    noRefs: true,
   });
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger documentation: http://localhost:${port}/api`);
+  // Write to file
+  fs.writeFileSync('./openapi.yaml', yamlString);
+
+  // Also generate JSON version
+  fs.writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
+
+  console.log('OpenAPI documentation generated:');
+  console.log('- openapi.yaml');
+  console.log('- openapi.json');
+
+  await app.close();
 }
-bootstrap();
+
+generateOpenAPI().catch((error) => {
+  console.error('Error generating OpenAPI documentation:', error);
+  process.exit(1);
+});

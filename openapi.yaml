@@ -1,0 +1,551 @@
+openapi: 3.0.0
+info:
+  title: Dolly Vibe API
+  description: The Dolly Vibe API documentation with VibeUser management, authentication, and more
+  version: 1.0.0
+  contact:
+    name: Dolly Vibe Team
+    url: https://dollyvibe.com
+    email: support@dollyvibe.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.dollyvibe.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    LoginDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 6
+          example: password123
+
+    RegisterDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 6
+          example: password123
+        name:
+          type: string
+          example: John Doe
+
+    CreateVibeUserDto:
+      type: object
+      properties:
+        discordId:
+          type: string
+          example: "123456789"
+          description: Discord user ID
+        twitterId:
+          type: string
+          example: "987654321"
+          description: Twitter user ID
+        isJoined:
+          type: boolean
+          default: false
+          description: 是否加入0G项目方Discord
+        isFollowed:
+          type: boolean
+          default: false
+          description: 是否关注Dolly Twitter
+        status:
+          type: string
+          enum: [NORMAL, BLACKLIST]
+          default: NORMAL
+          description: 用户状态
+
+    UpdateVibeUserDto:
+      type: object
+      properties:
+        discordId:
+          type: string
+          example: "123456789"
+        twitterId:
+          type: string
+          example: "987654321"
+        isJoined:
+          type: boolean
+        isFollowed:
+          type: boolean
+        status:
+          type: string
+          enum: [NORMAL, BLACKLIST]
+
+    VibeUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: cljk1234567890
+        discordId:
+          type: string
+          example: "123456789"
+        twitterId:
+          type: string
+          example: "987654321"
+        isJoined:
+          type: boolean
+          example: false
+        isFollowed:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [NORMAL, BLACKLIST]
+          example: NORMAL
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedVibeUsers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VibeUser'
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalPages:
+          type: integer
+          example: 10
+
+    VibeUserStatistics:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+          example: 1000
+        normalUsers:
+          type: integer
+          example: 950
+        blacklistedUsers:
+          type: integer
+          example: 50
+        joinedUsers:
+          type: integer
+          example: 600
+        followedUsers:
+          type: integer
+          example: 700
+        bothJoinedAndFollowed:
+          type: integer
+          example: 500
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Bad Request
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+          example: /api/vibe-users
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: VibeUser Management
+    description: VibeUser CRUD operations
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  user:
+                    type: object
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+      responses:
+        '201':
+          description: Registration successful
+        '401':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /vibe-users:
+    post:
+      tags:
+        - VibeUser Management
+      summary: Create a new VibeUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVibeUserDto'
+      responses:
+        '201':
+          description: VibeUser created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '409':
+          description: Discord ID or Twitter ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - VibeUser Management
+      summary: Get all VibeUsers with filtering and pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: discordId
+          in: query
+          schema:
+            type: string
+        - name: twitterId
+          in: query
+          schema:
+            type: string
+        - name: isJoined
+          in: query
+          schema:
+            type: boolean
+        - name: isFollowed
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [NORMAL, BLACKLIST]
+      responses:
+        '200':
+          description: List of VibeUsers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVibeUsers'
+
+  /vibe-users/statistics:
+    get:
+      tags:
+        - VibeUser Management
+      summary: Get VibeUser statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUserStatistics'
+
+  /vibe-users/discord/{discordId}:
+    get:
+      tags:
+        - VibeUser Management
+      summary: Find VibeUser by Discord ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: discordId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Discord user ID
+      responses:
+        '200':
+          description: VibeUser found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
+
+  /vibe-users/twitter/{twitterId}:
+    get:
+      tags:
+        - VibeUser Management
+      summary: Find VibeUser by Twitter ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: twitterId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Twitter user ID
+      responses:
+        '200':
+          description: VibeUser found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
+
+  /vibe-users/{id}:
+    get:
+      tags:
+        - VibeUser Management
+      summary: Get VibeUser by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: VibeUser ID
+      responses:
+        '200':
+          description: VibeUser retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
+
+    patch:
+      tags:
+        - VibeUser Management
+      summary: Update VibeUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: VibeUser ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVibeUserDto'
+      responses:
+        '200':
+          description: VibeUser updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
+        '409':
+          description: Discord ID or Twitter ID already exists
+
+    delete:
+      tags:
+        - VibeUser Management
+      summary: Delete VibeUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: VibeUser ID
+      responses:
+        '204':
+          description: VibeUser deleted successfully
+        '404':
+          description: VibeUser not found
+
+  /vibe-users/{id}/status:
+    patch:
+      tags:
+        - VibeUser Management
+      summary: Update VibeUser status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: VibeUser ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [NORMAL, BLACKLIST]
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
+
+  /vibe-users/{id}/social-status:
+    patch:
+      tags:
+        - VibeUser Management
+      summary: Update VibeUser social status (joined/followed)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: VibeUser ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isJoined:
+                  type: boolean
+                isFollowed:
+                  type: boolean
+      responses:
+        '200':
+          description: Social status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VibeUser'
+        '404':
+          description: VibeUser not found
