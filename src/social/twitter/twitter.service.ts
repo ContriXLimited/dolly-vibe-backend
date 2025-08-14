@@ -16,12 +16,17 @@ export class TwitterService {
   /**
    * 获取Twitter OAuth URL (OAuth 1.0a)
    */
-  async getOAuthUrl(): Promise<string> {
+  async getOAuthUrl(walletAddress?: string): Promise<string> {
     try {
       // Step 1: Get request token
       const requestTokenResponse = await this.getRequestToken();
       
-      // Step 2: Redirect user to Twitter authorization
+      // Step 2: Cache wallet address with oauth token (if provided)
+      if (walletAddress) {
+        await this.cacheWalletAddressForToken(requestTokenResponse.oauth_token, walletAddress);
+      }
+      
+      // Step 3: Redirect user to Twitter authorization
       const authUrl = `https://api.twitter.com/oauth/authenticate?oauth_token=${requestTokenResponse.oauth_token}`;
       
       return authUrl;
@@ -99,26 +104,26 @@ export class TwitterService {
     twitterId: string,
     username: string,
     isFollowingDolly: boolean,
-    vibeUserId?: string
+    walletAddress?: string
   ) {
-    // 查找或创建VibeUser
-    let vibeUser = await this.prisma.vibeUser.findFirst({
-      where: vibeUserId ? { id: vibeUserId } : { twitterId },
-    });
+    let vibeUser;
 
-    if (!vibeUser) {
-      // 创建新用户
-      vibeUser = await this.prisma.vibeUser.create({
-        data: {
-          id: require('@paralleldrive/cuid2').createId(),
-          twitterId,
-          twitterUsername: username,
-          twitterConnected: true,
-          isFollowed: isFollowingDolly,
+    if (walletAddress) {
+      // 根据钱包地址查找用户，并确保钱包已验证连接
+      vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { 
+          walletAddress: walletAddress.toLowerCase(),
+          walletConnected: true, // 必须钱包已验证连接
         },
       });
-    } else {
-      // 更新现有用户
+
+      if (!vibeUser) {
+        throw new BadRequestException(
+          `No verified wallet connection found for address: ${walletAddress}. Please connect and verify your wallet first.`
+        );
+      }
+
+      // 更新现有用户的Twitter信息
       vibeUser = await this.prisma.vibeUser.update({
         where: { id: vibeUser.id },
         data: {
@@ -128,6 +133,37 @@ export class TwitterService {
           isFollowed: isFollowingDolly,
         },
       });
+
+      this.logger.log(`Updated Twitter connection for verified wallet ${walletAddress} -> Twitter ${twitterId}`);
+    } else {
+      // 原有逻辑：根据twitterId查找或创建
+      vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { twitterId },
+      });
+
+      if (!vibeUser) {
+        // 创建新用户
+        vibeUser = await this.prisma.vibeUser.create({
+          data: {
+            id: require('@paralleldrive/cuid2').createId(),
+            twitterId,
+            twitterUsername: username,
+            twitterConnected: true,
+            isFollowed: isFollowingDolly,
+          },
+        });
+      } else {
+        // 更新现有用户
+        vibeUser = await this.prisma.vibeUser.update({
+          where: { id: vibeUser.id },
+          data: {
+            twitterId,
+            twitterUsername: username,
+            twitterConnected: true,
+            isFollowed: isFollowingDolly,
+          },
+        });
+      }
     }
 
     // 检查是否所有连接都完成
@@ -278,6 +314,55 @@ export class TwitterService {
     } catch (error) {
       this.logger.error('Error checking Twitter following status:', error.message);
       return false;
+    }
+  }
+
+  /**
+   * 缓存OAuth token与钱包地址的映射
+   */
+  async cacheWalletAddressForToken(oauthToken: string, walletAddress: string) {
+    // 使用数据库临时存储，10分钟过期
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    
+    await this.prisma.walletNonce.create({
+      data: {
+        id: require('@paralleldrive/cuid2').createId(),
+        walletAddress: walletAddress.toLowerCase(),
+        nonce: oauthToken, // 重用nonce字段存储token
+        message: `Twitter OAuth token mapping for ${walletAddress}`,
+        expiresAt,
+      },
+    });
+
+    this.logger.log(`Cached wallet address ${walletAddress} for Twitter OAuth token`);
+  }
+
+  /**
+   * 从缓存中获取OAuth token对应的钱包地址
+   */
+  async getWalletAddressFromToken(oauthToken: string): Promise<string | undefined> {
+    try {
+      const record = await this.prisma.walletNonce.findFirst({
+        where: {
+          nonce: oauthToken,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (record) {
+        // 清理已使用的记录
+        await this.prisma.walletNonce.delete({
+          where: { id: record.id },
+        });
+        
+        this.logger.log(`Retrieved wallet address ${record.walletAddress} for Twitter OAuth token`);
+        return record.walletAddress;
+      }
+
+      return undefined;
+    } catch (error) {
+      this.logger.warn('Failed to retrieve wallet address from token cache:', error.message);
+      return undefined;
     }
   }
 

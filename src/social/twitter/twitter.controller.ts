@@ -22,14 +22,53 @@ import { SocialConnectionStatusDto } from '../dto/social-oauth.dto';
 export class TwitterController {
   constructor(private readonly twitterService: TwitterService) {}
 
+  @Get('oauth-url')
+  @ApiOperation({ summary: '获取Twitter OAuth授权链接' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'OAuth URL generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        oauthUrl: { type: 'string', example: 'https://api.twitter.com/oauth/authenticate?...' },
+        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' }
+      }
+    }
+  })
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: true,
+    description: 'Wallet address to bind Twitter account to',
+    example: '0x1234567890123456789012345678901234567890'
+  })
+  async getOAuthUrl(@Query('walletAddress') walletAddress: string) {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+    const url = await this.twitterService.getOAuthUrl(walletAddress);
+    return {
+      oauthUrl: url,
+      walletAddress: walletAddress
+    };
+  }
+
   @Get('oauth')
-  @ApiOperation({ summary: '启动Twitter OAuth授权流程' })
+  @ApiOperation({ summary: '启动Twitter OAuth授权流程（直接重定向）' })
   @ApiResponse({ 
     status: 302, 
     description: 'Redirect to Twitter OAuth page' 
   })
-  async startOAuth(@Res() res) {
-    const url = await this.twitterService.getOAuthUrl();
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: true,
+    description: 'Wallet address to bind Twitter account to',
+    example: '0x1234567890123456789012345678901234567890'
+  })
+  async startOAuth(@Query('walletAddress') walletAddress: string, @Res() res) {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+    const url = await this.twitterService.getOAuthUrl(walletAddress);
     return res.redirect(url);
   }
 
@@ -53,9 +92,15 @@ export class TwitterController {
   @ApiResponse({ status: 400, description: 'OAuth callback failed' })
   @ApiQuery({ name: 'oauth_token', description: 'Twitter OAuth token' })
   @ApiQuery({ name: 'oauth_verifier', description: 'Twitter OAuth verifier' })
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: false,
+    description: 'Wallet address to bind Twitter account to (optional for backward compatibility)' 
+  })
   async handleCallback(
     @Query('oauth_token') oauthToken: string,
     @Query('oauth_verifier') oauthVerifier: string,
+    @Query('walletAddress') walletAddress?: string,
   ) {
     if (!oauthToken || !oauthVerifier) {
       throw new BadRequestException('Missing OAuth parameters');
@@ -63,11 +108,16 @@ export class TwitterController {
 
     const result = await this.twitterService.handleOAuthCallback(oauthToken, oauthVerifier);
     
+    // 如果提供了钱包地址，从token缓存中获取；否则使用查询参数
+    const targetWalletAddress = walletAddress || 
+      await this.twitterService.getWalletAddressFromToken(oauthToken);
+    
     // 更新用户连接状态
     await this.twitterService.updateTwitterConnection(
       result.twitterId,
       result.username,
       result.isFollowingDolly,
+      targetWalletAddress,
     );
 
     return {
@@ -76,6 +126,7 @@ export class TwitterController {
       username: result.username,
       displayName: result.displayName,
       isFollowingDolly: result.isFollowingDolly,
+      walletAddress: targetWalletAddress,
       message: result.isFollowingDolly 
         ? 'Twitter connection successful! You are following Dolly.' 
         : 'Twitter connection successful! Please follow @Dolly to complete verification.',
