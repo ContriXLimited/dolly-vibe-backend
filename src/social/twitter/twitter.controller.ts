@@ -3,7 +3,7 @@ import {
   Get,
   Query,
   UseGuards,
-  Redirect,
+  Res,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -28,10 +28,9 @@ export class TwitterController {
     status: 302, 
     description: 'Redirect to Twitter OAuth page' 
   })
-  @Redirect()
-  async startOAuth() {
+  async startOAuth(@Res() res) {
     const url = await this.twitterService.getOAuthUrl();
-    return { url };
+    return res.redirect(url);
   }
 
   @Get('callback')
