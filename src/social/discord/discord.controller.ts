@@ -4,7 +4,7 @@ import {
   Post,
   Query,
   UseGuards,
-  Redirect,
+  Res,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -29,10 +29,9 @@ export class DiscordController {
     status: 302, 
     description: 'Redirect to Discord OAuth page' 
   })
-  @Redirect()
-  startOAuth() {
+  startOAuth(@Res() res) {
     const url = this.discordService.getOAuthUrl();
-    return { url };
+    return res.redirect(url);
   }
 
   @Get('callback')

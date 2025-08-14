@@ -42,19 +42,24 @@ export class DiscordService {
         throw new BadRequestException('Missing authorization code');
       }
 
+      this.logger.log(`Processing Discord OAuth callback with code: ${code.substring(0, 10)}...`);
+
       // 交换访问令牌
       const tokenData = await this.exchangeCodeForToken(code);
+      this.logger.log('Successfully exchanged code for token');
       
       // 获取用户信息
       const userInfo = await this.getUserInfo(tokenData.access_token);
+      this.logger.log(`Retrieved user info for Discord ID: ${userInfo.id}`);
       
       // 检查用户是否加入了指定的Discord服务器
       const isInGuild = await this.checkGuildMembership(tokenData.access_token, userInfo.id);
+      this.logger.log(`Guild membership check result: ${isInGuild}`);
 
       return {
         discordId: userInfo.id,
         username: userInfo.username,
-        discriminator: userInfo.discriminator,
+        discriminator: userInfo.discriminator || '0', // Discord移除了discriminator，默认为0
         avatar: userInfo.avatar,
         isInGuild,
         accessToken: tokenData.access_token, // 用于后续API调用
@@ -62,7 +67,11 @@ export class DiscordService {
 
     } catch (error) {
       this.logger.error('Discord OAuth callback error:', error.message);
-      throw new BadRequestException('Discord authentication failed');
+      this.logger.error('Error stack:', error.stack);
+      if (error.response?.data) {
+        this.logger.error('Discord API error response:', JSON.stringify(error.response.data));
+      }
+      throw new BadRequestException(`Discord authentication failed: ${error.message}`);
     }
   }
 
@@ -141,23 +150,33 @@ export class DiscordService {
     const clientSecret = this.configService.get<string>('DISCORD_CLIENT_SECRET');
     const redirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
 
-    const response = await axios.post(
-      'https://discord.com/api/oauth2/token',
-      new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      },
-    );
+    this.logger.log(`Exchanging code for token with redirect URI: ${redirectUri}`);
 
-    return response.data;
+    try {
+      const response = await axios.post(
+        'https://discord.com/api/oauth2/token',
+        new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri,
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Token exchange failed:', error.message);
+      if (error.response?.data) {
+        this.logger.error('Discord token exchange error:', JSON.stringify(error.response.data));
+      }
+      throw error;
+    }
   }
 
   /**
