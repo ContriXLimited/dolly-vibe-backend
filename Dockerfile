@@ -49,5 +49,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Start the application
-CMD ["node", "dist/main"]
+# Start the application with fallback options
+CMD ["sh", "-c", "if [ -f dist/main.js ]; then node dist/main.js; elif [ -f dist/index.js ]; then node dist/index.js; elif [ -f dist/src/main.js ]; then node dist/src/main.js; else echo 'Entry point not found! Available files:' && find dist -name '*.js' | head -5 && exit 1; fi"]
