@@ -6,6 +6,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { VibeUserModule } from './vibe-user/vibe-user.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SocialModule } from './social/social.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SocialModule } from './social/social.module';
     VibeUserModule,
     WalletModule,
     SocialModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
