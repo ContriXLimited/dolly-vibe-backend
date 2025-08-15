@@ -291,6 +291,59 @@ export class TwitterService {
   }
 
   /**
+   * 检查并更新用户的Twitter关注状态
+   */
+  async checkAndUpdateFollowStatus(twitterId: string): Promise<{
+    isFollowed: boolean;
+    updated: boolean;
+    message: string;
+  }> {
+    try {
+      // 查找用户记录
+      const vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { twitterId },
+      });
+
+      if (!vibeUser) {
+        throw new BadRequestException(`User with Twitter ID ${twitterId} not found`);
+      }
+
+      // 通过Twitter用户名检查关注状态
+      const isFollowing = await this.checkFollowingStatus('', '', vibeUser.twitterUsername);
+      let updated = false;
+
+      this.logger.log(`Twitter follow check result for ${twitterId} (@${vibeUser.twitterUsername}): ${isFollowing}`);
+
+      // 如果状态有变化，更新数据库
+      if (vibeUser.isFollowed !== isFollowing) {
+        await this.prisma.vibeUser.update({
+          where: { id: vibeUser.id },
+          data: {
+            isFollowed: isFollowing,
+          },
+        });
+        updated = true;
+        this.logger.log(`Updated isFollowed status for ${twitterId}: ${isFollowing}`);
+      }
+
+      // 重新检查全连接状态
+      await this.checkAndUpdateAllConnected(vibeUser.id);
+
+      return {
+        isFollowed: isFollowing,
+        updated,
+        message: isFollowing 
+          ? 'User is following Dolly Twitter' 
+          : 'User is not following Dolly Twitter',
+      };
+
+    } catch (error) {
+      this.logger.error(`Error checking Twitter follow status for ${twitterId}:`, error.message);
+      throw new BadRequestException(`Failed to check Twitter follow status: ${error.message}`);
+    }
+  }
+
+  /**
    * 检查用户是否关注Dolly (使用twitterapi.io)
    */
   private async checkFollowingStatus(

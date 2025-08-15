@@ -87,6 +87,96 @@ export class UserStatusService {
   }
 
   /**
+   * 获取用户状态并自动检查更新Discord和Twitter关注状态
+   */
+  async getUserStatusWithRealTimeCheck(vibeUserId: string): Promise<UserConnectionStatus> {
+    const user = await this.prisma.vibeUser.findUnique({
+      where: { id: vibeUserId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let updatedUser = user;
+    let isUpdated = false;
+
+    // 检查Discord状态：如果用户已连接Discord但isJoined为false，则实时检查
+    if (user.discordConnected && user.discordId && !user.isJoined) {
+      try {
+        this.logger.log(`Checking Discord membership for user ${user.discordId}...`);
+        const discordResult = await this.discordService.checkAndUpdateGuildMembership(user.discordId);
+        
+        if (discordResult.updated) {
+          isUpdated = true;
+          this.logger.log(`Discord status updated for user ${vibeUserId}: isJoined=${discordResult.isJoined}`);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to check Discord membership for user ${vibeUserId}: ${error.message}`);
+      }
+    }
+
+    // 检查Twitter状态：如果用户已连接Twitter但isFollowed为false，则实时检查
+    if (user.twitterConnected && user.twitterId && !user.isFollowed) {
+      try {
+        this.logger.log(`Checking Twitter follow status for user ${user.twitterId}...`);
+        const twitterResult = await this.twitterService.checkAndUpdateFollowStatus(user.twitterId);
+        
+        if (twitterResult.updated) {
+          isUpdated = true;
+          this.logger.log(`Twitter status updated for user ${vibeUserId}: isFollowed=${twitterResult.isFollowed}`);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to check Twitter follow status for user ${vibeUserId}: ${error.message}`);
+      }
+    }
+
+    // 如果有更新，重新获取用户数据
+    if (isUpdated) {
+      updatedUser = await this.prisma.vibeUser.findUnique({
+        where: { id: vibeUserId },
+      });
+      
+      // 重新检查全连接状态
+      await this.checkAndUpdateAllConnected(vibeUserId);
+      
+      // 再次获取最新数据（可能allConnected状态已更新）
+      updatedUser = await this.prisma.vibeUser.findUnique({
+        where: { id: vibeUserId },
+      });
+    }
+
+    return {
+      discord: {
+        connected: updatedUser.discordConnected,
+        username: updatedUser.discordUsername,
+        userId: updatedUser.discordId,
+        verified: updatedUser.isJoined,
+        isJoined: updatedUser.isJoined,
+        connectedAt: updatedUser.discordConnected ? updatedUser.updatedAt : null,
+      },
+      twitter: {
+        connected: updatedUser.twitterConnected,
+        username: updatedUser.twitterUsername,
+        userId: updatedUser.twitterId,
+        verified: updatedUser.isFollowed,
+        isFollowed: updatedUser.isFollowed,
+        connectedAt: updatedUser.twitterConnected ? updatedUser.updatedAt : null,
+      },
+      wallet: {
+        connected: updatedUser.walletConnected,
+        walletAddress: updatedUser.walletAddress,
+        verifiedAt: updatedUser.walletVerifiedAt,
+      },
+      overall: {
+        allConnected: updatedUser.allConnected,
+        completedAt: updatedUser.completedAt,
+        canProceed: updatedUser.discordConnected && updatedUser.twitterConnected && updatedUser.walletConnected,
+      },
+    };
+  }
+
+  /**
    * 根据不同标识符查找或创建用户
    */
   async findOrCreateUser(identifier: {

@@ -163,4 +163,133 @@ export class DiscordController {
       guildName: '0G Network Discord Server',
     };
   }
+
+  @Post('check-membership')
+  @ApiOperation({ summary: '检查用户Discord频道关注状态并更新数据库' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Discord membership status checked and updated',
+    schema: {
+      type: 'object',
+      properties: {
+        discordId: { type: 'string', example: '123456789' },
+        isJoined: { type: 'boolean', example: true },
+        updated: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'User is a member of the Discord server' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiQuery({ 
+    name: 'discordId', 
+    required: true,
+    description: 'Discord user ID to check membership for',
+    example: '123456789'
+  })
+  @ApiQuery({ 
+    name: 'accessToken', 
+    required: false,
+    description: 'Discord access token for API check (optional, will use bot token if not provided)'
+  })
+  async checkMembership(
+    @Query('discordId') discordId: string,
+    @Query('accessToken') accessToken?: string,
+  ) {
+    if (!discordId) {
+      throw new BadRequestException('Discord ID is required');
+    }
+
+    const result = await this.discordService.checkAndUpdateGuildMembership(discordId, accessToken);
+    
+    return {
+      discordId,
+      ...result,
+    };
+  }
+
+  @Post('batch-check-membership')
+  @ApiOperation({ summary: '批量检查多个用户的Discord频道关注状态' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Batch Discord membership status check completed',
+    schema: {
+      type: 'object',
+      properties: {
+        results: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              discordId: { type: 'string', example: '123456789' },
+              isJoined: { type: 'boolean', example: true },
+              updated: { type: 'boolean', example: false },
+              error: { type: 'string', example: 'User not found' }
+            }
+          }
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            total: { type: 'number', example: 5 },
+            joined: { type: 'number', example: 3 },
+            updated: { type: 'number', example: 2 },
+            errors: { type: 'number', example: 1 }
+          }
+        }
+      }
+    }
+  })
+  async batchCheckMembership(@Query('discordIds') discordIds: string) {
+    if (!discordIds) {
+      throw new BadRequestException('Discord IDs are required');
+    }
+
+    const discordIdArray = discordIds.split(',').map(id => id.trim()).filter(id => id);
+    
+    if (discordIdArray.length === 0) {
+      throw new BadRequestException('At least one valid Discord ID is required');
+    }
+
+    const results = await this.discordService.batchCheckGuildMembership(discordIdArray);
+    
+    // 生成统计信息
+    const summary = {
+      total: results.length,
+      joined: results.filter(r => r.isJoined).length,
+      updated: results.filter(r => r.updated).length,
+      errors: results.filter(r => r.error).length,
+    };
+
+    return {
+      results,
+      summary,
+    };
+  }
+
+  @Get('test-bot-config')
+  @ApiOperation({ 
+    summary: '测试Discord Bot配置',
+    description: '检查Discord Bot Token是否有效，以及Bot是否能访问目标Guild'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Bot configuration test results',
+    schema: {
+      type: 'object',
+      properties: {
+        botTokenValid: { type: 'boolean', example: true },
+        guildAccessible: { type: 'boolean', example: true },
+        guildId: { type: 'string', example: '123456789' },
+        botPermissions: { 
+          type: 'array',
+          items: { type: 'string' },
+          example: ['123456789', '987654321']
+        },
+        error: { type: 'string', example: 'Bot lacks View Server Members permission' }
+      }
+    }
+  })
+  async testBotConfiguration() {
+    return this.discordService.testBotConfiguration();
+  }
 }

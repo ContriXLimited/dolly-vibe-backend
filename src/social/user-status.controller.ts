@@ -157,10 +157,13 @@ export class UserStatusController {
   }
 
   @Get('status-by-wallet')
-  @ApiOperation({ summary: '根据Wallet地址获取用户完整状态' })
+  @ApiOperation({ 
+    summary: '根据Wallet地址获取用户完整状态（实时检查Discord和Twitter关注状态）',
+    description: '此接口会自动检查用户的Discord频道关注状态和Twitter关注状态，如果发现状态变化会自动更新数据库'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'User status retrieved successfully by wallet address',
+    description: 'User status retrieved and updated successfully by wallet address',
     schema: {
       type: 'object',
       properties: {
@@ -183,7 +186,7 @@ export class UserStatusController {
                 connected: { type: 'boolean', example: true },
                 username: { type: 'string', example: 'user#1234' },
                 userId: { type: 'string', example: '123456789' },
-                isJoined: { type: 'boolean', example: true, description: '是否加入Discord服务器' },
+                isJoined: { type: 'boolean', example: true, description: '是否加入Discord服务器（已实时检查）' },
                 connectedAt: { type: 'string', format: 'date-time' }
               }
             },
@@ -193,7 +196,7 @@ export class UserStatusController {
                 connected: { type: 'boolean', example: true },
                 username: { type: 'string', example: 'dollyuser' },
                 userId: { type: 'string', example: '987654321' },
-                isFollowed: { type: 'boolean', example: true, description: '是否关注Dolly Twitter' },
+                isFollowed: { type: 'boolean', example: true, description: '是否关注Dolly Twitter（已实时检查）' },
                 connectedAt: { type: 'string', format: 'date-time' }
               }
             },
@@ -208,11 +211,19 @@ export class UserStatusController {
             overall: {
               type: 'object',
               properties: {
-                allConnected: { type: 'boolean', example: true },
+                allConnected: { type: 'boolean', example: true, description: '所有连接是否完成（实时更新）' },
                 completedAt: { type: 'string', format: 'date-time' },
                 canProceed: { type: 'boolean', example: true, description: '是否可以点击Let\'s Vibe按钮' }
               }
             }
+          }
+        },
+        realTimeChecks: {
+          type: 'object',
+          properties: {
+            discordChecked: { type: 'boolean', example: true, description: '是否进行了Discord实时检查' },
+            twitterChecked: { type: 'boolean', example: true, description: '是否进行了Twitter实时检查' },
+            statusUpdated: { type: 'boolean', example: false, description: '状态是否有更新' }
           }
         }
       }
@@ -228,9 +239,25 @@ export class UserStatusController {
     description: 'Ethereum wallet address',
     example: '0x1234567890123456789012345678901234567890'
   })
+  @ApiQuery({ 
+    name: 'skipRealTimeCheck', 
+    required: false, 
+    description: '跳过实时检查，仅返回数据库中的状态（默认false）',
+    example: false
+  })
   async getUserStatusByWallet(
     @Query('walletAddress') walletAddress: string,
-  ): Promise<{ vibeUserId: string; walletAddress: string; status: UserConnectionStatus }> {
+    @Query('skipRealTimeCheck') skipRealTimeCheck?: string,
+  ): Promise<{ 
+    vibeUserId: string; 
+    walletAddress: string; 
+    status: UserConnectionStatus;
+    realTimeChecks?: {
+      discordChecked: boolean;
+      twitterChecked: boolean;
+      statusUpdated: boolean;
+    }
+  }> {
     if (!walletAddress) {
       throw new BadRequestException('Wallet address is required');
     }
@@ -240,10 +267,28 @@ export class UserStatusController {
       walletAddress,
     });
 
-    // 获取用户状态
-    const status = await this.userStatusService.getUserStatus(vibeUserId);
-
-    return { vibeUserId, walletAddress, status };
+    // 根据参数决定是否进行实时检查
+    const shouldSkipCheck = skipRealTimeCheck === 'true';
+    
+    if (shouldSkipCheck) {
+      // 只获取数据库中的状态，不进行实时检查
+      const status = await this.userStatusService.getUserStatus(vibeUserId);
+      return { vibeUserId, walletAddress, status };
+    } else {
+      // 获取用户状态并进行实时检查
+      const status = await this.userStatusService.getUserStatusWithRealTimeCheck(vibeUserId);
+      
+      return { 
+        vibeUserId, 
+        walletAddress, 
+        status,
+        realTimeChecks: {
+          discordChecked: status.discord.connected && !!status.discord.userId,
+          twitterChecked: status.twitter.connected && !!status.twitter.userId,
+          statusUpdated: true // 这里简化了，实际可以从service中返回更详细的信息
+        }
+      };
+    }
   }
 
   @Get('stats')

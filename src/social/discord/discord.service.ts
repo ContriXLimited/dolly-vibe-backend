@@ -25,7 +25,7 @@ export class DiscordService {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'identify guilds',
+      scope: 'identify guilds', // 确保包含guilds权限
       state,
     });
 
@@ -224,7 +224,7 @@ export class DiscordService {
   }
 
   /**
-   * 检查用户是否加入了指定的Guild
+   * 检查用户是否加入了指定的Guild（使用OAuth Token）
    */
   private async checkGuildMembership(accessToken: string, userId: string): Promise<boolean> {
     try {
@@ -235,6 +235,8 @@ export class DiscordService {
         return false;
       }
 
+      this.logger.log(`Checking guild membership via OAuth token for user ${userId} in guild ${guildId}`);
+
       const response = await axios.get(`${this.DISCORD_API_BASE}/users/@me/guilds`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -242,10 +244,25 @@ export class DiscordService {
       });
 
       const guilds = response.data;
-      return guilds.some((guild: any) => guild.id === guildId);
+      this.logger.log(`Found ${guilds.length} guilds for user ${userId}`);
+      
+      // 记录用户所在的服务器ID（用于调试）
+      const guildIds = guilds.map((guild: any) => guild.id);
+      this.logger.log(`User ${userId} is in guilds: ${guildIds.join(', ')}`);
+      
+      const isInTargetGuild = guilds.some((guild: any) => guild.id === guildId);
+      this.logger.log(`User ${userId} ${isInTargetGuild ? 'IS' : 'IS NOT'} in target guild ${guildId}`);
+      
+      return isInTargetGuild;
 
     } catch (error) {
-      this.logger.error('Error checking guild membership:', error.message);
+      this.logger.error('Error checking guild membership via OAuth:', error.message);
+      if (error.response?.status === 403) {
+        this.logger.error('403 Forbidden: OAuth token may lack guilds scope or user has privacy settings enabled');
+      }
+      if (error.response?.data) {
+        this.logger.error('Discord API error response:', JSON.stringify(error.response.data));
+      }
       return false;
     }
   }
@@ -282,6 +299,236 @@ export class DiscordService {
     }
 
     return undefined;
+  }
+
+  /**
+   * 检查用户Discord频道关注状态并同步更新数据库
+   */
+  async checkAndUpdateGuildMembership(discordId: string, accessToken?: string): Promise<{
+    isJoined: boolean;
+    updated: boolean;
+    message: string;
+  }> {
+    try {
+      // 查找用户记录
+      const vibeUser = await this.prisma.vibeUser.findFirst({
+        where: { discordId },
+      });
+
+      if (!vibeUser) {
+        throw new BadRequestException(`User with Discord ID ${discordId} not found`);
+      }
+
+      let isInGuild = false;
+      let updated = false;
+
+      // 如果提供了访问令牌，使用API检查
+      if (accessToken) {
+        isInGuild = await this.checkGuildMembership(accessToken, discordId);
+        this.logger.log(`API check result for ${discordId}: ${isInGuild}`);
+      } else {
+        // 如果没有访问令牌，尝试使用Bot Token检查（需要配置）
+        isInGuild = await this.checkGuildMembershipWithBot(discordId);
+        this.logger.log(`Bot check result for ${discordId}: ${isInGuild}`);
+      }
+
+      // 如果状态有变化，更新数据库
+      if (vibeUser.isJoined !== isInGuild) {
+        await this.prisma.vibeUser.update({
+          where: { id: vibeUser.id },
+          data: {
+            isJoined: isInGuild,
+          },
+        });
+        updated = true;
+        this.logger.log(`Updated isJoined status for ${discordId}: ${isInGuild}`);
+      }
+
+      // 重新检查全连接状态
+      await this.checkAndUpdateAllConnected(vibeUser.id);
+
+      return {
+        isJoined: isInGuild,
+        updated,
+        message: isInGuild 
+          ? 'User is a member of the Discord server' 
+          : 'User is not a member of the Discord server',
+      };
+
+    } catch (error) {
+      this.logger.error(`Error checking guild membership for ${discordId}:`, error.message);
+      throw new BadRequestException(`Failed to check Discord guild membership: ${error.message}`);
+    }
+  }
+
+  /**
+   * 使用Bot Token检查用户是否在Guild中
+   * 注意：需要配置DISCORD_BOT_TOKEN环境变量，Bot需要有View Server Members权限
+   */
+  private async checkGuildMembershipWithBot(userId: string): Promise<boolean> {
+    try {
+      const botToken = this.configService.get<string>('DISCORD_BOT_TOKEN');
+      const guildId = this.configService.get<string>('DISCORD_GUILD_ID');
+      
+      if (!botToken) {
+        this.logger.warn('DISCORD_BOT_TOKEN not configured, cannot check membership via bot');
+        return false;
+      }
+
+      if (!guildId) {
+        this.logger.warn('DISCORD_GUILD_ID not configured');
+        return false;
+      }
+
+      this.logger.log(`Checking guild membership via Bot token for user ${userId} in guild ${guildId}`);
+
+      const response = await axios.get(
+        `${this.DISCORD_API_BASE}/guilds/${guildId}/members/${userId}`,
+        {
+          headers: {
+            Authorization: `Bot ${botToken}`,
+          },
+          timeout: 5000, // 5秒超时
+        }
+      );
+
+      this.logger.log(`Bot API response status: ${response.status} for user ${userId}`);
+      return response.status === 200;
+
+    } catch (error) {
+      if (error.response?.status === 404) {
+        this.logger.log(`User ${userId} is NOT in guild ${this.configService.get<string>('DISCORD_GUILD_ID')} (404 Not Found)`);
+        return false;
+      }
+      if (error.response?.status === 403) {
+        this.logger.error(`Bot lacks permission to check guild members (403 Forbidden). Bot needs 'View Server Members' permission in guild.`);
+        return false;
+      }
+      if (error.response?.status === 401) {
+        this.logger.error(`Invalid bot token (401 Unauthorized). Please check DISCORD_BOT_TOKEN configuration.`);
+        return false;
+      }
+      
+      this.logger.error('Error checking guild membership with bot:', error.message);
+      if (error.response?.data) {
+        this.logger.error('Discord Bot API error response:', JSON.stringify(error.response.data));
+      }
+      return false;
+    }
+  }
+
+  /**
+   * 批量检查多个用户的Discord频道关注状态
+   */
+  async batchCheckGuildMembership(discordIds: string[]): Promise<Array<{
+    discordId: string;
+    isJoined: boolean;
+    updated: boolean;
+    error?: string;
+  }>> {
+    const results = [];
+
+    for (const discordId of discordIds) {
+      try {
+        const result = await this.checkAndUpdateGuildMembership(discordId);
+        results.push({
+          discordId,
+          isJoined: result.isJoined,
+          updated: result.updated,
+        });
+      } catch (error) {
+        results.push({
+          discordId,
+          isJoined: false,
+          updated: false,
+          error: error.message,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 测试Discord Bot配置是否正确
+   */
+  async testBotConfiguration(): Promise<{
+    botTokenValid: boolean;
+    guildAccessible: boolean;
+    guildId?: string;
+    botPermissions?: string[];
+    error?: string;
+  }> {
+    try {
+      const botToken = this.configService.get<string>('DISCORD_BOT_TOKEN');
+      const guildId = this.configService.get<string>('DISCORD_GUILD_ID');
+
+      if (!botToken) {
+        return { 
+          botTokenValid: false, 
+          guildAccessible: false, 
+          error: 'DISCORD_BOT_TOKEN not configured' 
+        };
+      }
+
+      if (!guildId) {
+        return { 
+          botTokenValid: false, 
+          guildAccessible: false, 
+          error: 'DISCORD_GUILD_ID not configured' 
+        };
+      }
+
+      // 测试Bot Token是否有效
+      const botUserResponse = await axios.get(`${this.DISCORD_API_BASE}/users/@me`, {
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+      });
+
+      this.logger.log(`Bot user info: ${botUserResponse.data.username}#${botUserResponse.data.discriminator}`);
+
+      // 测试是否可以访问目标Guild
+      const guildResponse = await axios.get(`${this.DISCORD_API_BASE}/guilds/${guildId}`, {
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+      });
+
+      this.logger.log(`Guild info: ${guildResponse.data.name} (ID: ${guildResponse.data.id})`);
+
+      // 获取Bot在Guild中的权限
+      const botMemberResponse = await axios.get(
+        `${this.DISCORD_API_BASE}/guilds/${guildId}/members/${botUserResponse.data.id}`,
+        {
+          headers: {
+            Authorization: `Bot ${botToken}`,
+          },
+        }
+      );
+
+      const roles = botMemberResponse.data.roles;
+      this.logger.log(`Bot roles in guild: ${roles.join(', ')}`);
+
+      return {
+        botTokenValid: true,
+        guildAccessible: true,
+        guildId: guildResponse.data.id,
+        botPermissions: roles,
+      };
+
+    } catch (error) {
+      this.logger.error('Error testing bot configuration:', error.message);
+      if (error.response?.data) {
+        this.logger.error('Discord API error response:', JSON.stringify(error.response.data));
+      }
+
+      return {
+        botTokenValid: false,
+        guildAccessible: false,
+        error: error.message,
+      };
+    }
   }
 
   /**
