@@ -20,11 +20,11 @@ Before deploying, you need to set up the following secrets in Northflank:
 | `JWT_SECRET` | JWT signing secret | Generate a random 64-character string |
 | `DISCORD_CLIENT_ID` | Discord OAuth client ID | From Discord Developer Portal |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth client secret | From Discord Developer Portal |
-| `DISCORD_REDIRECT_URI` | Discord OAuth callback URL | `https://your-domain.com/auth/discord/callback` |
+| `DISCORD_REDIRECT_URI` | Discord OAuth callback URL | `https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/auth/discord/callback` |
 | `DISCORD_GUILD_ID` | Discord server ID for verification | Your Discord server ID |
 | `TWITTER_API_KEY` | Twitter API key | From Twitter Developer Portal |
 | `TWITTER_API_SECRET` | Twitter API secret | From Twitter Developer Portal |
-| `TWITTER_CALLBACK_URL` | Twitter OAuth callback URL | `https://your-domain.com/auth/twitter/callback` |
+| `TWITTER_CALLBACK_URL` | Twitter OAuth callback URL | `https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/auth/twitter/callback` |
 | `DOLLY_TWITTER_ID` | Dolly's Twitter username | `AskDollyToday` |
 
 ## Deployment Steps
@@ -113,10 +113,11 @@ npx prisma migrate deploy
 
 ## Monitoring and Logs
 
-1. **Health Check**: Available at `https://your-domain.com/health`
-2. **API Documentation**: Available at `https://your-domain.com/api`
-3. **Logs**: Available in Northflank dashboard under "Logs" tab
-4. **Metrics**: Available in Northflank dashboard under "Metrics" tab
+1. **Health Check**: Available at `https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/health`
+2. **API Documentation**: Available at `https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/api`
+3. **Root Endpoint**: Available at `https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/`
+4. **Logs**: Available in Northflank dashboard under "Logs" tab
+5. **Metrics**: Available in Northflank dashboard under "Metrics" tab
 
 ## Scaling
 

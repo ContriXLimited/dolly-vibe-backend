@@ -25,6 +25,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .addServer('http://localhost:3000', 'Development server')
+    .addServer('https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run', 'Northflank deployment server')
     .setContact(
       'Dolly Vibe Team',
       'https://dollyvibe.com',
@@ -37,6 +38,7 @@ async function bootstrap() {
     .addTag('Discord Integration', 'Discord OAuth and server verification')
     .addTag('Twitter Integration', 'Twitter OAuth and follow verification')
     .addTag('User Connection Status', 'User connection status management')
+    .addTag('Health Check', 'Health check and monitoring endpoints')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {

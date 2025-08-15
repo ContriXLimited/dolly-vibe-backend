@@ -1,0 +1,114 @@
+{
+  "apiVersion": "v1",
+  "spec": {
+    "kind": "Workflow",
+    "spec": {
+      "type": "sequential",
+      "context": {},
+      "steps": [
+        {
+          "kind": "Build",
+          "spec": {
+            "id": "dolly-vibe-backend-build",
+            "buildFrom": {
+              "type": "dockerfile",
+              "dockerfile": "./Dockerfile"
+            },
+            "buildArguments": {},
+            "environment": [
+              {
+                "name": "NODE_ENV",
+                "value": "production"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "DeployService",
+          "spec": {
+            "id": "dolly-vibe-backend",
+            "image": "{{.builds.dolly-vibe-backend-build.image}}",
+            "port": 3000,
+            "cpu": "0.2 vCPU",
+            "memory": "512 MiB",
+            "replicas": {
+              "min": 1,
+              "max": 3
+            },
+            "autoscaling": {
+              "enabled": true,
+              "targetCPUUtilization": 70,
+              "targetMemoryUtilization": 80
+            },
+            "healthCheck": {
+              "enabled": true,
+              "path": "/health",
+              "initialDelaySeconds": 30,
+              "periodSeconds": 10
+            },
+            "environment": [
+              {
+                "name": "NODE_ENV",
+                "value": "production"
+              },
+              {
+                "name": "PORT",
+                "value": "3000"
+              },
+              {
+                "name": "DATABASE_URL",
+                "value": "${SECRET_DATABASE_URL}"
+              },
+              {
+                "name": "JWT_SECRET",
+                "value": "${SECRET_JWT_SECRET}"
+              },
+              {
+                "name": "DISCORD_CLIENT_ID",
+                "value": "${SECRET_DISCORD_CLIENT_ID}"
+              },
+              {
+                "name": "DISCORD_CLIENT_SECRET", 
+                "value": "${SECRET_DISCORD_CLIENT_SECRET}"
+              },
+              {
+                "name": "DISCORD_REDIRECT_URI",
+                "value": "https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/auth/discord/callback"
+              },
+              {
+                "name": "DISCORD_GUILD_ID",
+                "value": "${SECRET_DISCORD_GUILD_ID}"
+              },
+              {
+                "name": "TWITTER_API_KEY",
+                "value": "${SECRET_TWITTER_API_KEY}"
+              },
+              {
+                "name": "TWITTER_API_SECRET",
+                "value": "${SECRET_TWITTER_API_SECRET}"
+              },
+              {
+                "name": "TWITTER_CALLBACK_URL",
+                "value": "https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run/auth/twitter/callback"
+              },
+              {
+                "name": "DOLLY_TWITTER_ID",
+                "value": "${SECRET_DOLLY_TWITTER_ID}"
+              }
+            ],
+            "publicAccess": {
+              "enabled": true,
+              "dns": {
+                "domains": [
+                  {
+                    "domain": "p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

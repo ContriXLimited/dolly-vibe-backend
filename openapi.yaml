@@ -31,6 +31,8 @@ info:
 servers:
   - url: http://localhost:3000
     description: Development server (local testing)
+  - url: https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run
+    description: Northflank deployment server
   - url: https://staging-api.dollyvibe.com
     description: Staging server (pre-production)
   - url: https://api.dollyvibe.com
