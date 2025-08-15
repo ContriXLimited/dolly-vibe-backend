@@ -35,7 +35,8 @@ export class TwitterController {
       type: 'object',
       properties: {
         oauthUrl: { type: 'string', example: 'https://api.twitter.com/oauth/authenticate?...' },
-        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' }
+        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' },
+        callbackUrl: { type: 'string', example: 'https://custom-domain.com/callback' }
       }
     }
   })
@@ -45,14 +46,24 @@ export class TwitterController {
     description: 'Wallet address to bind Twitter account to',
     example: '0x1234567890123456789012345678901234567890'
   })
-  async getOAuthUrl(@Query('walletAddress') walletAddress: string) {
+  @ApiQuery({ 
+    name: 'callbackUrl', 
+    required: false,
+    description: 'Custom callback URL (optional, uses .env default if not provided)',
+    example: 'https://custom-domain.com/auth/twitter/callback'
+  })
+  async getOAuthUrl(
+    @Query('walletAddress') walletAddress: string,
+    @Query('callbackUrl') callbackUrl?: string,
+  ) {
     if (!walletAddress) {
       throw new BadRequestException('Wallet address is required');
     }
-    const url = await this.twitterService.getOAuthUrl(walletAddress);
+    const url = await this.twitterService.getOAuthUrl(walletAddress, callbackUrl);
     return {
       oauthUrl: url,
-      walletAddress: walletAddress
+      walletAddress: walletAddress,
+      callbackUrl: callbackUrl || 'default from .env'
     };
   }
 
@@ -68,11 +79,21 @@ export class TwitterController {
     description: 'Wallet address to bind Twitter account to',
     example: '0x1234567890123456789012345678901234567890'
   })
-  async startOAuth(@Query('walletAddress') walletAddress: string, @Res() res) {
+  @ApiQuery({ 
+    name: 'callbackUrl', 
+    required: false,
+    description: 'Custom callback URL (optional)',
+    example: 'https://custom-domain.com/auth/twitter/callback'
+  })
+  async startOAuth(
+    @Query('walletAddress') walletAddress: string, 
+    @Query('callbackUrl') callbackUrl: string,
+    @Res() res
+  ) {
     if (!walletAddress) {
       throw new BadRequestException('Wallet address is required');
     }
-    const url = await this.twitterService.getOAuthUrl(walletAddress);
+    const url = await this.twitterService.getOAuthUrl(walletAddress, callbackUrl);
     return res.redirect(url);
   }
 

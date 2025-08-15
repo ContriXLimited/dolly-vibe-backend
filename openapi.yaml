@@ -1,520 +1,59 @@
 openapi: 3.0.0
-info:
-  title: Dolly Vibe API
-  description: |
-    The Dolly Vibe API provides comprehensive user management, authentication, and social media integration capabilities.
-    
-    This API supports:
-    - User authentication and authorization
-    - Social media integration (Discord, Twitter)
-    - Wallet verification and blockchain interaction
-    - User status tracking and analytics
-    
-    ## Authentication
-    Most endpoints require JWT bearer token authentication. Obtain tokens via the `/auth/login` endpoint.
-    
-    ## Rate Limiting
-    API requests are rate-limited. Please implement appropriate retry logic in your applications.
-    
-    ## Support
-    For API support, please contact our team at support@dollyvibe.com
-  version: 1.0.0
-  contact:
-    name: Dolly Vibe Team
-    url: https://dollyvibe.com
-    email: support@dollyvibe.com
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: https://dollyvibe.com/terms
-
-servers:
-  - url: http://localhost:3000
-    description: Development server (local testing)
-  - url: https://p01--dolly-vibe-backend--jlqhr9wl7sxr.code.run
-    description: Northflank deployment server
-  - url: https://staging-api.dollyvibe.com
-    description: Staging server (pre-production)
-  - url: https://api.dollyvibe.com
-    description: Production server
-
-security:
-  - BearerAuth: []
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT token obtained from login endpoint
-
-  schemas:
-    LoginDto:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          example: user@example.com
-        password:
-          type: string
-          minLength: 6
-          example: password123
-
-    RegisterDto:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          example: user@example.com
-        password:
-          type: string
-          minLength: 6
-          example: password123
-        name:
-          type: string
-          example: John Doe
-
-    CreateVibeUserDto:
-      type: object
-      properties:
-        discordId:
-          type: string
-          example: "123456789"
-          description: Discord user ID
-        twitterId:
-          type: string
-          example: "987654321"
-          description: Twitter user ID
-        isJoined:
-          type: boolean
-          default: false
-          description: 是否加入0G项目方Discord
-        isFollowed:
-          type: boolean
-          default: false
-          description: 是否关注Dolly Twitter
-        status:
-          type: string
-          enum: [NORMAL, BLACKLIST]
-          default: NORMAL
-          description: 用户状态
-
-    UpdateVibeUserDto:
-      type: object
-      properties:
-        discordId:
-          type: string
-          example: "123456789"
-        twitterId:
-          type: string
-          example: "987654321"
-        isJoined:
-          type: boolean
-        isFollowed:
-          type: boolean
-        status:
-          type: string
-          enum: [NORMAL, BLACKLIST]
-
-    VibeUser:
-      type: object
-      properties:
-        id:
-          type: string
-          example: cljk1234567890
-        discordId:
-          type: string
-          example: "123456789"
-        twitterId:
-          type: string
-          example: "987654321"
-        isJoined:
-          type: boolean
-          example: false
-        isFollowed:
-          type: boolean
-          example: false
-        status:
-          type: string
-          enum: [NORMAL, BLACKLIST]
-          example: NORMAL
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    PaginatedVibeUsers:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VibeUser'
-        total:
-          type: integer
-          example: 100
-        page:
-          type: integer
-          example: 1
-        limit:
-          type: integer
-          example: 10
-        totalPages:
-          type: integer
-          example: 10
-
-    VibeUserStatistics:
-      type: object
-      properties:
-        totalUsers:
-          type: integer
-          example: 1000
-        normalUsers:
-          type: integer
-          example: 950
-        blacklistedUsers:
-          type: integer
-          example: 50
-        joinedUsers:
-          type: integer
-          example: 600
-        followedUsers:
-          type: integer
-          example: 700
-        bothJoinedAndFollowed:
-          type: integer
-          example: 500
-
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          example: 400
-        message:
-          type: string
-          example: Bad Request
-        timestamp:
-          type: string
-          format: date-time
-        path:
-          type: string
-          example: /api/vibe-users
-
-    WalletNonceResponse:
-      type: object
-      properties:
-        nonce:
-          type: string
-          example: abc123def456
-        message:
-          type: string
-          example: "Please sign this message to verify your wallet: abc123def456"
-        expiresAt:
-          type: string
-          format: date-time
-
-    WalletVerificationDto:
-      type: object
-      required:
-        - walletAddress
-        - nonce
-        - signature
-      properties:
-        walletAddress:
-          type: string
-          example: "0x1234567890123456789012345678901234567890"
-        nonce:
-          type: string
-          example: abc123def456
-        signature:
-          type: string
-          example: "0x123abc..."
-
-    WalletStatusResponse:
-      type: object
-      properties:
-        connected:
-          type: boolean
-          example: true
-        walletAddress:
-          type: string
-          example: "0x1234567890123456789012345678901234567890"
-        verifiedAt:
-          type: string
-          format: date-time
-
-    SocialConnectionStatus:
-      type: object
-      properties:
-        connected:
-          type: boolean
-          example: true
-        username:
-          type: string
-          example: "username123"
-        userId:
-          type: string
-          example: "123456789"
-        verified:
-          type: boolean
-          example: true
-        connectedAt:
-          type: string
-          format: date-time
-
-    UserConnectionStatus:
-      type: object
-      properties:
-        discord:
-          type: object
-          properties:
-            connected:
-              type: boolean
-              example: true
-            username:
-              type: string
-              example: "user#1234"
-            userId:
-              type: string
-              example: "123456789"
-            verified:
-              type: boolean
-              example: true
-              description: "是否加入0G Discord"
-            isJoined:
-              type: boolean
-              example: true
-              description: "是否加入Discord服务器"
-            connectedAt:
-              type: string
-              format: date-time
-        twitter:
-          type: object
-          properties:
-            connected:
-              type: boolean
-              example: true
-            username:
-              type: string
-              example: "dollyuser"
-            userId:
-              type: string
-              example: "987654321"
-            verified:
-              type: boolean
-              example: true
-              description: "是否关注Dolly"
-            isFollowed:
-              type: boolean
-              example: true
-              description: "是否关注Dolly Twitter"
-            connectedAt:
-              type: string
-              format: date-time
-        wallet:
-          type: object
-          properties:
-            connected:
-              type: boolean
-              example: true
-            walletAddress:
-              type: string
-              example: "0x123...789"
-            verifiedAt:
-              type: string
-              format: date-time
-        overall:
-          type: object
-          properties:
-            allConnected:
-              type: boolean
-              example: true
-            completedAt:
-              type: string
-              format: date-time
-            canProceed:
-              type: boolean
-              example: true
-              description: "是否可以点击Let's Vibe按钮"
-
-    CompletionStats:
-      type: object
-      properties:
-        total:
-          type: integer
-          example: 1000
-          description: "总用户数"
-        completed:
-          type: integer
-          example: 750
-          description: "完成所有连接的用户数"
-        completionRate:
-          type: string
-          example: "75.00"
-          description: "完成率百分比"
-        connections:
-          type: object
-          properties:
-            discord:
-              type: integer
-              example: 850
-              description: "Connected Discord accounts"
-            twitter:
-              type: integer
-              example: 800
-              description: "Connected Twitter accounts"
-            wallet:
-              type: integer
-              example: 900
-              description: "Connected wallet addresses"
-        verified:
-          type: object
-          properties:
-            joinedDiscord:
-              type: integer
-              example: 700
-              description: "Users who joined Discord server"
-            followedTwitter:
-              type: integer
-              example: 650
-              description: "Users who followed Twitter account"
-
-    OAuthUrlResponse:
-      type: object
-      properties:
-        oauthUrl:
-          type: string
-          description: "OAuth authorization URL"
-        walletAddress:
-          type: string
-          description: "Wallet address to bind the account to"
-      required:
-        - oauthUrl
-        - walletAddress
-
-    TwitterFollowCheckResponse:
-      type: object
-      properties:
-        isFollowing:
-          type: boolean
-          description: "Whether the user is following the target account"
-        sourceUser:
-          type: string
-          description: "Username being checked"
-        targetUser:
-          type: string
-          description: "Target username (Dolly's account)"
-        message:
-          type: string
-          description: "Descriptive message about the follow status"
-      required:
-        - isFollowing
-        - sourceUser
-        - targetUser
-        - message
-
-tags:
-  - name: Authentication
-    description: Authentication endpoints
-  - name: VibeUser Management
-    description: VibeUser CRUD operations
-  - name: Wallet Verification
-    description: Wallet signature verification
-  - name: Discord Integration
-    description: Discord OAuth and server verification
-  - name: Twitter Integration
-    description: Twitter OAuth and follow verification
-  - name: User Connection Status
-    description: User connection status management
-
 paths:
-  /auth/login:
-    post:
-      tags:
-        - Authentication
-      summary: User login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginDto'
+  /auth/profile:
+    get:
+      operationId: AuthController_getProfile
+      summary: Get current user profile (requires wallet login JWT)
+      parameters: []
       responses:
         '200':
-          description: Login successful
+          description: Profile retrieved successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  access_token:
+                  id:
                     type: string
-                  user:
-                    type: object
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/register:
-    post:
-      tags:
-        - Authentication
-      summary: User registration
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterDto'
-      responses:
-        '201':
-          description: Registration successful
-        '401':
-          description: Email already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/profile:
-    get:
-      tags:
-        - Authentication
-      summary: Get user profile
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Profile retrieved successfully
+                    example: clj123456789
+                  walletAddress:
+                    type: string
+                    example: '0x1234567890123456789012345678901234567890'
+                  discordId:
+                    type: string
+                    example: '123456789'
+                  twitterId:
+                    type: string
+                    example: '987654321'
+                  discordUsername:
+                    type: string
+                    example: user#1234
+                  twitterUsername:
+                    type: string
+                    example: dollyuser
+                  allConnected:
+                    type: boolean
+                    example: true
+                  isJoined:
+                    type: boolean
+                    example: true
+                  isFollowed:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: NORMAL
         '401':
           description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+      tags:
+        - Authentication
+      security:
+        - bearer: []
   /vibe-users:
     post:
-      tags:
-        - VibeUser Management
+      operationId: VibeUserController_create
       summary: Create a new VibeUser
-      security:
-        - BearerAuth: []
+      parameters: []
       requestBody:
         required: true
         content:
@@ -524,166 +63,161 @@ paths:
       responses:
         '201':
           description: VibeUser created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
+        '400':
+          description: Bad request
         '409':
           description: Discord ID or Twitter ID already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    get:
       tags:
         - VibeUser Management
-      summary: Get all VibeUsers with filtering and pagination
       security:
-        - BearerAuth: []
+        - bearer: []
+    get:
+      operationId: VibeUserController_findAll
+      summary: Get all VibeUsers with filtering and pagination
       parameters:
         - name: page
+          required: false
           in: query
+          description: Page number
           schema:
-            type: integer
             minimum: 1
             default: 1
+            type: number
         - name: limit
+          required: false
           in: query
+          description: Items per page
           schema:
-            type: integer
             minimum: 1
             maximum: 100
             default: 10
+            type: number
         - name: discordId
+          required: false
           in: query
+          description: Discord user ID
           schema:
+            example: '123456789'
             type: string
         - name: twitterId
+          required: false
           in: query
+          description: Twitter user ID
           schema:
+            example: '987654321'
             type: string
         - name: isJoined
+          required: false
           in: query
+          description: 是否加入0G项目方Discord
           schema:
+            example: true
             type: boolean
         - name: isFollowed
+          required: false
           in: query
+          description: 是否关注Dolly Twitter
           schema:
+            example: true
             type: boolean
         - name: status
+          required: false
           in: query
+          description: 用户状态
           schema:
+            enum:
+              - NORMAL
+              - BLACKLIST
             type: string
-            enum: [NORMAL, BLACKLIST]
       responses:
         '200':
           description: List of VibeUsers retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedVibeUsers'
-
-  /vibe-users/statistics:
-    get:
       tags:
         - VibeUser Management
-      summary: Get VibeUser statistics
       security:
-        - BearerAuth: []
+        - bearer: []
+  /vibe-users/statistics:
+    get:
+      operationId: VibeUserController_getStatistics
+      summary: Get VibeUser statistics
+      parameters: []
       responses:
         '200':
           description: Statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUserStatistics'
-
+      tags:
+        - VibeUser Management
+      security:
+        - bearer: []
   /vibe-users/discord/{discordId}:
     get:
-      tags:
-        - VibeUser Management
+      operationId: VibeUserController_findByDiscordId
       summary: Find VibeUser by Discord ID
-      security:
-        - BearerAuth: []
       parameters:
         - name: discordId
-          in: path
           required: true
+          in: path
+          description: Discord user ID
           schema:
             type: string
-          description: Discord user ID
       responses:
         '200':
           description: VibeUser found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
-
+      tags:
+        - VibeUser Management
+      security:
+        - bearer: []
   /vibe-users/twitter/{twitterId}:
     get:
-      tags:
-        - VibeUser Management
+      operationId: VibeUserController_findByTwitterId
       summary: Find VibeUser by Twitter ID
-      security:
-        - BearerAuth: []
       parameters:
         - name: twitterId
-          in: path
           required: true
+          in: path
+          description: Twitter user ID
           schema:
             type: string
-          description: Twitter user ID
       responses:
         '200':
           description: VibeUser found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
-
-  /vibe-users/{id}:
-    get:
       tags:
         - VibeUser Management
-      summary: Get VibeUser by ID
       security:
-        - BearerAuth: []
+        - bearer: []
+  /vibe-users/{id}:
+    get:
+      operationId: VibeUserController_findOne
+      summary: Get VibeUser by ID
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
       responses:
         '200':
           description: VibeUser retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
-
-    patch:
       tags:
         - VibeUser Management
-      summary: Update VibeUser
       security:
-        - BearerAuth: []
+        - bearer: []
+    patch:
+      operationId: VibeUserController_update
+      summary: Update VibeUser
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
       requestBody:
         required: true
         content:
@@ -693,260 +227,243 @@ paths:
       responses:
         '200':
           description: VibeUser updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
         '409':
           description: Discord ID or Twitter ID already exists
-
-    delete:
       tags:
         - VibeUser Management
-      summary: Delete VibeUser
       security:
-        - BearerAuth: []
+        - bearer: []
+    delete:
+      operationId: VibeUserController_remove
+      summary: Delete VibeUser
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
       responses:
         '204':
           description: VibeUser deleted successfully
         '404':
           description: VibeUser not found
-
-  /vibe-users/{id}/status:
-    patch:
       tags:
         - VibeUser Management
-      summary: Update VibeUser status
       security:
-        - BearerAuth: []
+        - bearer: []
+  /vibe-users/{id}/status:
+    patch:
+      operationId: VibeUserController_updateStatus
+      summary: Update VibeUser status
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - status
-              properties:
-                status:
-                  type: string
-                  enum: [NORMAL, BLACKLIST]
       responses:
         '200':
           description: Status updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
-
-  /vibe-users/{id}/social-status:
-    patch:
       tags:
         - VibeUser Management
-      summary: Update VibeUser social status (joined/followed)
       security:
-        - BearerAuth: []
+        - bearer: []
+  /vibe-users/{id}/social-status:
+    patch:
+      operationId: VibeUserController_updateSocialStatus
+      summary: Update VibeUser social status (joined/followed)
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                isJoined:
-                  type: boolean
-                isFollowed:
-                  type: boolean
       responses:
         '200':
           description: Social status updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VibeUser'
         '404':
           description: VibeUser not found
-
-  # Wallet Verification APIs
+      tags:
+        - VibeUser Management
+      security:
+        - bearer: []
   /auth/wallet/nonce:
     get:
-      tags:
-        - Wallet Verification
+      operationId: WalletController_getNonce
       summary: 获取钱包签名用的nonce
       parameters:
         - name: walletAddress
-          in: query
           required: true
+          in: query
           schema:
+            example: '0x1234567890123456789012345678901234567890'
             type: string
-            example: "0x1234567890123456789012345678901234567890"
-          description: Ethereum wallet address
       responses:
         '200':
           description: Nonce generated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WalletNonceResponse'
+                type: object
+                properties:
+                  nonce:
+                    type: string
+                    example: abc123def456
+                  message:
+                    type: string
+                    example: 'Please sign this message to verify your wallet: abc123def456'
+                  expiresAt:
+                    type: string
+                    format: date-time
         '400':
           description: Invalid wallet address
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/wallet/verify:
-    post:
       tags:
         - Wallet Verification
-      summary: 验证钱包签名
+  /auth/wallet/verify:
+    post:
+      operationId: WalletController_verifyWallet
+      summary: 验证钱包签名并登录（钱包连接即登录）
+      parameters: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WalletVerificationDto'
+              $ref: '#/components/schemas/VerifyWalletDto'
       responses:
         '200':
-          description: Wallet verified successfully
+          description: Wallet verified successfully and user logged in
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  verified:
-                    type: boolean
-                    example: true
-                  walletAddress:
-                    type: string
-                    example: "0x1234567890123456789012345678901234567890"
+                $ref: '#/components/schemas/WalletLoginResponseDto'
         '400':
           description: Invalid signature or nonce
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/wallet/status:
-    get:
       tags:
         - Wallet Verification
+  /auth/wallet/status:
+    get:
+      operationId: WalletController_getWalletStatus
       summary: 检查钱包连接状态
       parameters:
         - name: walletAddress
-          in: query
           required: true
+          in: query
           schema:
+            example: '0x1234567890123456789012345678901234567890'
             type: string
-            example: "0x1234567890123456789012345678901234567890"
-          description: Ethereum wallet address
       responses:
         '200':
           description: Wallet status retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WalletStatusResponse'
-        '400':
-          description: Invalid wallet address
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  # Discord Integration APIs
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                    example: true
+                  walletAddress:
+                    type: string
+                    example: '0x1234567890123456789012345678901234567890'
+                  verifiedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+      tags:
+        - Wallet Verification
   /auth/discord/oauth-url:
     get:
-      tags:
-        - Discord Integration
-      summary: 获取Discord OAuth授权URL
+      operationId: DiscordController_getOAuthUrl
+      summary: 获取Discord OAuth授权链接
       parameters:
         - name: walletAddress
-          in: query
           required: true
-          schema:
-            type: string
-            example: "0x1234567890123456789012345678901234567890"
+          in: query
           description: Wallet address to bind Discord account to
+          schema:
+            example: '0x1234567890123456789012345678901234567890'
+            type: string
+        - name: callbackUrl
+          required: false
+          in: query
+          description: Custom callback URL (optional, uses .env default if not provided)
+          schema:
+            example: https://custom-domain.com/auth/discord/callback
+            type: string
       responses:
         '200':
-          description: Discord OAuth URL generated successfully
+          description: OAuth URL generated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OAuthUrlResponse'
-              example:
-                oauthUrl: "https://discord.com/api/oauth2/authorize?client_id=..."
-                walletAddress: "0x1234567890123456789012345678901234567890"
-        '400':
-          description: Wallet address is required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/discord/oauth:
-    get:
+                type: object
+                properties:
+                  oauthUrl:
+                    type: string
+                    example: https://discord.com/api/oauth2/authorize?...
+                  walletAddress:
+                    type: string
+                    example: '0x1234567890123456789012345678901234567890'
+                  callbackUrl:
+                    type: string
+                    example: https://custom-domain.com/callback
       tags:
         - Discord Integration
-      summary: 启动Discord OAuth授权流程 (重定向版本)
+  /auth/discord/oauth:
+    get:
+      operationId: DiscordController_startOAuth
+      summary: 启动Discord OAuth授权流程（直接重定向）
       parameters:
         - name: walletAddress
-          in: query
           required: true
-          schema:
-            type: string
-            example: "0x1234567890123456789012345678901234567890"
+          in: query
           description: Wallet address to bind Discord account to
+          schema:
+            example: '0x1234567890123456789012345678901234567890'
+            type: string
+        - name: callbackUrl
+          required: false
+          in: query
+          description: Custom callback URL (optional)
+          schema:
+            example: https://custom-domain.com/auth/discord/callback
+            type: string
       responses:
         '302':
           description: Redirect to Discord OAuth page
-        '400':
-          description: Wallet address is required
-
-  /auth/discord/callback:
-    get:
       tags:
         - Discord Integration
+  /auth/discord/callback:
+    get:
+      operationId: DiscordController_handleCallback
       summary: Discord OAuth回调处理
       parameters:
         - name: code
-          in: query
           required: true
-          schema:
-            type: string
-          description: Discord authorization code
-        - name: state
           in: query
-          required: false
+          description: Discord authorization code
           schema:
             type: string
+        - name: state
+          required: false
+          in: query
           description: OAuth state parameter
+          schema:
+            type: string
+        - name: callbackUrl
+          required: false
+          in: query
+          description: Original callback URL used for token exchange
+          schema:
+            type: string
       responses:
         '200':
           description: Discord OAuth completed successfully
@@ -960,52 +477,45 @@ paths:
                     example: true
                   discordId:
                     type: string
-                    example: "123456789"
+                    example: '123456789'
                   username:
                     type: string
-                    example: "user#1234"
+                    example: user#1234
                   isInGuild:
                     type: boolean
                     example: true
                   message:
                     type: string
-                    example: "Discord connection successful"
-                  walletAddress:
-                    type: string
-                    example: "0x1234567890123456789012345678901234567890"
-                    description: "Wallet address bound to this Discord account"
+                    example: Discord connection successful
         '400':
           description: OAuth callback failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/discord/status:
-    get:
       tags:
         - Discord Integration
+  /auth/discord/status:
+    get:
+      operationId: DiscordController_getDiscordStatus
       summary: 检查Discord连接状态
       parameters:
         - name: discordId
+          required: false
           in: query
-          required: true
+          description: Discord user ID to check status for
           schema:
             type: string
-          description: Discord user ID to check status for
       responses:
         '200':
           description: Discord status retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SocialConnectionStatus'
-
-  /auth/discord/guild-invite:
-    get:
+                $ref: '#/components/schemas/SocialConnectionStatusDto'
       tags:
         - Discord Integration
+  /auth/discord/guild-invite:
+    get:
+      operationId: DiscordController_getGuildInvite
       summary: 获取0G Discord服务器邀请链接
+      parameters: []
       responses:
         '200':
           description: Discord invite link
@@ -1016,84 +526,226 @@ paths:
                 properties:
                   inviteUrl:
                     type: string
-                    example: "https://discord.gg/0g-invite"
+                    example: https://discord.gg/0g-invite
                   guildName:
                     type: string
-                    example: "0G Network"
-
-  # Twitter Integration APIs
-  /auth/twitter/oauth-url:
-    get:
+                    example: 0G Network
       tags:
-        - Twitter Integration
-      summary: 获取Twitter OAuth授权URL
+        - Discord Integration
+  /auth/discord/check-membership:
+    post:
+      operationId: DiscordController_checkMembership
+      summary: 检查用户Discord频道关注状态并更新数据库
       parameters:
-        - name: walletAddress
-          in: query
+        - name: discordId
           required: true
+          in: query
+          description: Discord user ID to check membership for
+          schema:
+            example: '123456789'
+            type: string
+        - name: accessToken
+          required: false
+          in: query
+          description: Discord access token for API check (optional, will use bot token if not provided)
           schema:
             type: string
-            example: "0x1234567890123456789012345678901234567890"
-          description: Wallet address to bind Twitter account to
       responses:
         '200':
-          description: Twitter OAuth URL generated successfully
+          description: Discord membership status checked and updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OAuthUrlResponse'
-              example:
-                oauthUrl: "https://api.twitter.com/oauth/authorize?oauth_token=..."
-                walletAddress: "0x1234567890123456789012345678901234567890"
+                type: object
+                properties:
+                  discordId:
+                    type: string
+                    example: '123456789'
+                  isJoined:
+                    type: boolean
+                    example: true
+                  updated:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User is a member of the Discord server
         '400':
-          description: Wallet address is required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/twitter/oauth:
-    get:
+          description: Bad request
       tags:
-        - Twitter Integration
-      summary: 启动Twitter OAuth授权流程 (重定向版本)
+        - Discord Integration
+  /auth/discord/batch-check-membership:
+    post:
+      operationId: DiscordController_batchCheckMembership
+      summary: 批量检查多个用户的Discord频道关注状态
       parameters:
-        - name: walletAddress
-          in: query
+        - name: discordIds
           required: true
+          in: query
           schema:
             type: string
-            example: "0x1234567890123456789012345678901234567890"
+      responses:
+        '200':
+          description: Batch Discord membership status check completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        discordId:
+                          type: string
+                          example: '123456789'
+                        isJoined:
+                          type: boolean
+                          example: true
+                        updated:
+                          type: boolean
+                          example: false
+                        error:
+                          type: string
+                          example: User not found
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        example: 5
+                      joined:
+                        type: number
+                        example: 3
+                      updated:
+                        type: number
+                        example: 2
+                      errors:
+                        type: number
+                        example: 1
+      tags:
+        - Discord Integration
+  /auth/discord/test-bot-config:
+    get:
+      operationId: DiscordController_testBotConfiguration
+      summary: 测试Discord Bot配置
+      description: 检查Discord Bot Token是否有效，以及Bot是否能访问目标Guild
+      parameters: []
+      responses:
+        '200':
+          description: Bot configuration test results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  botTokenValid:
+                    type: boolean
+                    example: true
+                  guildAccessible:
+                    type: boolean
+                    example: true
+                  guildId:
+                    type: string
+                    example: '123456789'
+                  botPermissions:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - '123456789'
+                      - '987654321'
+                  error:
+                    type: string
+                    example: Bot lacks View Server Members permission
+      tags:
+        - Discord Integration
+  /auth/twitter/oauth-url:
+    get:
+      operationId: TwitterController_getOAuthUrl
+      summary: 获取Twitter OAuth授权链接
+      parameters:
+        - name: walletAddress
+          required: true
+          in: query
           description: Wallet address to bind Twitter account to
+          schema:
+            example: '0x1234567890123456789012345678901234567890'
+            type: string
+        - name: callbackUrl
+          required: false
+          in: query
+          description: Custom callback URL (optional, uses .env default if not provided)
+          schema:
+            example: https://custom-domain.com/auth/twitter/callback
+            type: string
+      responses:
+        '200':
+          description: OAuth URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oauthUrl:
+                    type: string
+                    example: https://api.twitter.com/oauth/authenticate?...
+                  walletAddress:
+                    type: string
+                    example: '0x1234567890123456789012345678901234567890'
+                  callbackUrl:
+                    type: string
+                    example: https://custom-domain.com/callback
+      tags:
+        - Twitter Integration
+  /auth/twitter/oauth:
+    get:
+      operationId: TwitterController_startOAuth
+      summary: 启动Twitter OAuth授权流程（直接重定向）
+      parameters:
+        - name: walletAddress
+          required: true
+          in: query
+          description: Wallet address to bind Twitter account to
+          schema:
+            example: '0x1234567890123456789012345678901234567890'
+            type: string
+        - name: callbackUrl
+          required: false
+          in: query
+          description: Custom callback URL (optional)
+          schema:
+            example: https://custom-domain.com/auth/twitter/callback
+            type: string
       responses:
         '302':
           description: Redirect to Twitter OAuth page
-
-  /auth/twitter/callback:
-    get:
       tags:
         - Twitter Integration
+  /auth/twitter/callback:
+    get:
+      operationId: TwitterController_handleCallback
       summary: Twitter OAuth回调处理
       parameters:
         - name: oauth_token
-          in: query
           required: true
-          schema:
-            type: string
+          in: query
           description: Twitter OAuth token
+          schema:
+            type: string
         - name: oauth_verifier
-          in: query
           required: true
-          schema:
-            type: string
-          description: Twitter OAuth verifier
-        - name: walletAddress
           in: query
-          required: false
+          description: Twitter OAuth verifier
           schema:
             type: string
-            example: "0x1234567890123456789012345678901234567890"
-          description: Optional wallet address to bind to this Twitter account
+        - name: walletAddress
+          required: false
+          in: query
+          description: Wallet address to bind Twitter account to (optional for backward compatibility)
+          schema:
+            type: string
       responses:
         '200':
           description: Twitter OAuth completed successfully
@@ -1107,93 +759,81 @@ paths:
                     example: true
                   twitterId:
                     type: string
-                    example: "123456789"
+                    example: '123456789'
                   username:
                     type: string
-                    example: "dollyuser"
+                    example: dollyuser
                   displayName:
                     type: string
-                    example: "Dolly User"
+                    example: Dolly User
                   isFollowingDolly:
                     type: boolean
                     example: true
                   message:
                     type: string
-                    example: "Twitter connection successful"
-                  walletAddress:
-                    type: string
-                    example: "0x1234567890123456789012345678901234567890"
-                    description: "Wallet address bound to this Twitter account"
+                    example: Twitter connection successful
         '400':
           description: OAuth callback failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/twitter/status:
-    get:
       tags:
         - Twitter Integration
+  /auth/twitter/status:
+    get:
+      operationId: TwitterController_getTwitterStatus
       summary: 检查Twitter连接状态
       parameters:
         - name: twitterId
+          required: false
           in: query
-          required: true
+          description: Twitter user ID to check status for
           schema:
             type: string
-          description: Twitter user ID to check status for
       responses:
         '200':
           description: Twitter status retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SocialConnectionStatus'
-
-  /auth/twitter/check-follow:
-    get:
+                $ref: '#/components/schemas/SocialConnectionStatusDto'
       tags:
         - Twitter Integration
-      summary: 检查用户是否关注Dolly Twitter
+  /auth/twitter/check-follow:
+    get:
+      operationId: TwitterController_checkFollowStatus
+      summary: 检查用户是否关注Dolly
       parameters:
         - name: username
-          in: query
           required: true
+          in: query
+          description: Twitter username to check (without @)
           schema:
             type: string
-            example: "dollyuser"
-          description: Twitter username to check
       responses:
         '200':
           description: Follow status checked successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TwitterFollowCheckResponse'
-              example:
-                isFollowing: true
-                sourceUser: "dollyuser"
-                targetUser: "DollyAI"
-                message: "User is following Dolly"
-        '400':
-          description: Invalid username or API error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/twitter/dolly-profile:
-    get:
+                type: object
+                properties:
+                  isFollowing:
+                    type: boolean
+                    example: true
+                  sourceUser:
+                    type: string
+                    example: username123
+                  targetUser:
+                    type: string
+                    example: AskDollyToday
+                  message:
+                    type: string
+                    example: Follow status checked successfully
       tags:
         - Twitter Integration
+  /auth/twitter/dolly-profile:
+    get:
+      operationId: TwitterController_getDollyProfile
       summary: 获取Dolly Twitter资料链接
+      parameters: []
       responses:
         '200':
           description: Dolly Twitter profile info
@@ -1204,186 +844,180 @@ paths:
                 properties:
                   profileUrl:
                     type: string
-                    example: "https://twitter.com/DollyAI"
+                    example: https://twitter.com/AskDollyToday
                   username:
                     type: string
-                    example: "DollyAI"
+                    example: AskDollyToday
                   displayName:
                     type: string
-                    example: "Dolly - AI Assistant"
-
-  # User Connection Status APIs
+                    example: Ask Dolly Today
+      tags:
+        - Twitter Integration
   /auth/user/status/{id}:
     get:
-      tags:
-        - User Connection Status
+      operationId: UserStatusController_getUserStatus
       summary: 获取用户所有连接状态
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
+          description: VibeUser ID
           schema:
             type: string
-          description: VibeUser ID
       responses:
         '200':
           description: User connection status retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConnectionStatus'
-        '404':
-          description: User not found
-
-  /auth/user/status:
-    get:
+                type: object
+                properties:
+                  discord:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                        example: true
+                      username:
+                        type: string
+                        example: user#1234
+                      userId:
+                        type: string
+                        example: '123456789'
+                      verified:
+                        type: boolean
+                        example: true
+                        description: 是否加入0G Discord
+                      connectedAt:
+                        type: string
+                        format: date-time
+                  twitter:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                        example: true
+                      username:
+                        type: string
+                        example: dollyuser
+                      userId:
+                        type: string
+                        example: '987654321'
+                      verified:
+                        type: boolean
+                        example: true
+                        description: 是否关注Dolly
+                      connectedAt:
+                        type: string
+                        format: date-time
+                  wallet:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                        example: true
+                      walletAddress:
+                        type: string
+                        example: 0x123...789
+                      verifiedAt:
+                        type: string
+                        format: date-time
+                  overall:
+                    type: object
+                    properties:
+                      allConnected:
+                        type: boolean
+                        example: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                      canProceed:
+                        type: boolean
+                        example: true
+                        description: 是否可以点击Let's Vibe按钮
       tags:
         - User Connection Status
+  /auth/user/status:
+    get:
+      operationId: UserStatusController_getUserStatusByIdentifier
       summary: 根据标识符获取用户连接状态
       parameters:
         - name: discordId
-          in: query
           required: false
-          schema:
-            type: string
+          in: query
           description: Discord user ID
+          schema:
+            type: string
         - name: twitterId
-          in: query
           required: false
-          schema:
-            type: string
+          in: query
           description: Twitter user ID
-        - name: walletAddress
-          in: query
-          required: false
           schema:
             type: string
+        - name: walletAddress
+          required: false
+          in: query
           description: Wallet address
+          schema:
+            type: string
       responses:
         '200':
           description: User status retrieved or created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  vibeUserId:
-                    type: string
-                    example: "clj123456789"
-                  status:
-                    $ref: '#/components/schemas/UserConnectionStatus'
-
-  /auth/user/connect/discord:
-    post:
       tags:
         - User Connection Status
+  /auth/user/connect/discord:
+    post:
+      operationId: UserStatusController_updateDiscordConnection
       summary: 更新用户Discord连接状态
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - vibeUserId
-                - discordId
-                - username
-                - isJoined
-              properties:
-                vibeUserId:
-                  type: string
-                  example: "clj123456789"
-                discordId:
-                  type: string
-                  example: "123456789"
-                username:
-                  type: string
-                  example: "user#1234"
-                isJoined:
-                  type: boolean
-                  example: true
+      parameters: []
       responses:
         '200':
           description: Discord status updated successfully
-
-  /auth/user/connect/twitter:
-    post:
       tags:
         - User Connection Status
+  /auth/user/connect/twitter:
+    post:
+      operationId: UserStatusController_updateTwitterConnection
       summary: 更新用户Twitter连接状态
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - vibeUserId
-                - twitterId
-                - username
-                - isFollowed
-              properties:
-                vibeUserId:
-                  type: string
-                  example: "clj123456789"
-                twitterId:
-                  type: string
-                  example: "987654321"
-                username:
-                  type: string
-                  example: "dollyuser"
-                isFollowed:
-                  type: boolean
-                  example: true
+      parameters: []
       responses:
         '200':
           description: Twitter status updated successfully
-
-  /auth/user/connect/wallet:
-    post:
       tags:
         - User Connection Status
+  /auth/user/connect/wallet:
+    post:
+      operationId: UserStatusController_updateWalletConnection
       summary: 更新用户钱包连接状态
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - vibeUserId
-                - walletAddress
-                - verified
-              properties:
-                vibeUserId:
-                  type: string
-                  example: "clj123456789"
-                walletAddress:
-                  type: string
-                  example: "0x1234567890123456789012345678901234567890"
-                verified:
-                  type: boolean
-                  example: true
+      parameters: []
       responses:
         '200':
           description: Wallet status updated successfully
-
-  /auth/user/status-by-wallet:
-    get:
       tags:
         - User Connection Status
-      summary: 根据Wallet地址获取用户完整状态
+  /auth/user/status-by-wallet:
+    get:
+      operationId: UserStatusController_getUserStatusByWallet
+      summary: 根据Wallet地址获取用户完整状态（实时检查Discord和Twitter关注状态）
+      description: 此接口会自动检查用户的Discord频道关注状态和Twitter关注状态，如果发现状态变化会自动更新数据库
       parameters:
         - name: walletAddress
-          in: query
           required: true
-          schema:
-            type: string
-            example: "0x1234567890123456789012345678901234567890"
+          in: query
           description: Ethereum wallet address
+          schema:
+            example: '0x1234567890123456789012345678901234567890'
+            type: string
+        - name: skipRealTimeCheck
+          required: false
+          in: query
+          description: 跳过实时检查，仅返回数据库中的状态（默认false）
+          schema:
+            example: false
+            type: string
       responses:
         '200':
-          description: User status retrieved successfully by wallet address
+          description: User status retrieved and updated successfully by wallet address
           content:
             application/json:
               schema:
@@ -1391,36 +1025,404 @@ paths:
                 properties:
                   vibeUserId:
                     type: string
-                    example: "clj123456789"
-                    description: "VibeUser ID"
+                    example: clj123456789
+                    description: VibeUser ID
                   walletAddress:
                     type: string
-                    example: "0x1234567890123456789012345678901234567890"
-                    description: "Wallet address"
+                    example: '0x1234567890123456789012345678901234567890'
+                    description: Wallet address
                   status:
-                    $ref: '#/components/schemas/UserConnectionStatus'
-        '400':
-          description: Invalid wallet address
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                    type: object
+                    properties:
+                      discord:
+                        type: object
+                        properties:
+                          connected:
+                            type: boolean
+                            example: true
+                          username:
+                            type: string
+                            example: user#1234
+                          userId:
+                            type: string
+                            example: '123456789'
+                          isJoined:
+                            type: boolean
+                            example: true
+                            description: 是否加入Discord服务器（已实时检查）
+                          connectedAt:
+                            type: string
+                            format: date-time
+                      twitter:
+                        type: object
+                        properties:
+                          connected:
+                            type: boolean
+                            example: true
+                          username:
+                            type: string
+                            example: dollyuser
+                          userId:
+                            type: string
+                            example: '987654321'
+                          isFollowed:
+                            type: boolean
+                            example: true
+                            description: 是否关注Dolly Twitter（已实时检查）
+                          connectedAt:
+                            type: string
+                            format: date-time
+                      wallet:
+                        type: object
+                        properties:
+                          connected:
+                            type: boolean
+                            example: true
+                          walletAddress:
+                            type: string
+                            example: 0x123...789
+                          verifiedAt:
+                            type: string
+                            format: date-time
+                      overall:
+                        type: object
+                        properties:
+                          allConnected:
+                            type: boolean
+                            example: true
+                            description: 所有连接是否完成（实时更新）
+                          completedAt:
+                            type: string
+                            format: date-time
+                          canProceed:
+                            type: boolean
+                            example: true
+                            description: 是否可以点击Let's Vibe按钮
+                  realTimeChecks:
+                    type: object
+                    properties:
+                      discordChecked:
+                        type: boolean
+                        example: true
+                        description: 是否进行了Discord实时检查
+                      twitterChecked:
+                        type: boolean
+                        example: true
+                        description: 是否进行了Twitter实时检查
+                      statusUpdated:
+                        type: boolean
+                        example: false
+                        description: 状态是否有更新
         '404':
           description: User not found with this wallet address
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/user/stats:
-    get:
       tags:
         - User Connection Status
+  /auth/user/stats:
+    get:
+      operationId: UserStatusController_getCompletionStats
       summary: 获取用户连接完成统计
+      parameters: []
       responses:
         '200':
           description: User completion statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompletionStats'
+                type: object
+                properties:
+                  total:
+                    type: number
+                    example: 1000
+                    description: 总用户数
+                  completed:
+                    type: number
+                    example: 750
+                    description: 完成所有连接的用户数
+                  completionRate:
+                    type: string
+                    example: '75.00'
+                    description: 完成率百分比
+                  connections:
+                    type: object
+                    properties:
+                      discord:
+                        type: number
+                        example: 850
+                      twitter:
+                        type: number
+                        example: 800
+                      wallet:
+                        type: number
+                        example: 900
+                  verified:
+                    type: object
+                    properties:
+                      joinedDiscord:
+                        type: number
+                        example: 700
+                      followedTwitter:
+                        type: number
+                        example: 650
+      tags:
+        - User Connection Status
+  /health:
+    get:
+      operationId: HealthController_healthCheck
+      summary: Health check endpoint
+      parameters: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    example: '2023-12-01T10:00:00.000Z'
+                  uptime:
+                    type: number
+                    example: 12345
+                  database:
+                    type: string
+                    example: connected
+                  version:
+                    type: string
+                    example: 1.0.0
+        '503':
+          description: Service is unhealthy
+      tags:
+        - Health Check
+  /:
+    get:
+      operationId: HealthController_getRoot
+      summary: Root endpoint
+      parameters: []
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: Dolly Vibe API
+                  version:
+                    type: string
+                    example: 1.0.0
+                  description:
+                    type: string
+                    example: Dolly Vibe Backend API
+                  docs:
+                    type: string
+                    example: /api
+      tags:
+        - Health Check
+info:
+  title: Dolly Vibe API
+  description: The Dolly Vibe API documentation with VibeUser management, authentication, and more
+  version: '1.0'
+  contact:
+    name: Dolly Vibe Team
+    url: https://dollyvibe.com
+    email: support@dollyvibe.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: VibeUser Management
+    description: VibeUser CRUD operations
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.dollyvibe.com
+    description: Production server
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    CreateVibeUserDto:
+      type: object
+      properties:
+        discordId:
+          type: string
+          example: '123456789'
+          description: Discord user ID
+        twitterId:
+          type: string
+          example: '987654321'
+          description: Twitter user ID
+        isJoined:
+          type: boolean
+          example: false
+          description: 是否加入0G项目方Discord
+          default: false
+        isFollowed:
+          type: boolean
+          example: false
+          description: 是否关注Dolly Twitter
+          default: false
+        status:
+          type: string
+          enum:
+            - NORMAL
+            - BLACKLIST
+          example: NORMAL
+          description: 用户状态
+          default: NORMAL
+    UpdateVibeUserDto:
+      type: object
+      properties:
+        discordId:
+          type: string
+          example: '123456789'
+          description: Discord user ID
+        twitterId:
+          type: string
+          example: '987654321'
+          description: Twitter user ID
+        isJoined:
+          type: boolean
+          example: true
+          description: 是否加入0G项目方Discord
+        isFollowed:
+          type: boolean
+          example: true
+          description: 是否关注Dolly Twitter
+        status:
+          type: string
+          enum:
+            - NORMAL
+            - BLACKLIST
+          example: NORMAL
+          description: 用户状态
+    VerifyWalletDto:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+          example: '0x1234567890123456789012345678901234567890'
+          description: Ethereum wallet address
+        nonce:
+          type: string
+          example: abc123def456
+          description: Nonce received from /nonce endpoint
+        signature:
+          type: string
+          example: 0x123abc...
+          description: Signature from wallet
+      required:
+        - walletAddress
+        - nonce
+        - signature
+    WalletLoginResponseDto:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          example: true
+          description: Whether wallet verification was successful
+        walletAddress:
+          type: string
+          example: '0x1234567890123456789012345678901234567890'
+          description: Verified wallet address
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          description: JWT access token for authentication
+        user:
+          type: object
+          description: User information
+          properties:
+            id:
+              type: string
+              example: clj123456789
+            walletAddress:
+              type: string
+              example: '0x1234567890123456789012345678901234567890'
+            discordId:
+              type: string
+              example: '123456789'
+              nullable: true
+            twitterId:
+              type: string
+              example: '987654321'
+              nullable: true
+            discordUsername:
+              type: string
+              example: user#1234
+              nullable: true
+            twitterUsername:
+              type: string
+              example: dollyuser
+              nullable: true
+            discordConnected:
+              type: boolean
+              example: false
+            twitterConnected:
+              type: boolean
+              example: false
+            walletConnected:
+              type: boolean
+              example: true
+            isJoined:
+              type: boolean
+              example: false
+            isFollowed:
+              type: boolean
+              example: false
+            allConnected:
+              type: boolean
+              example: false
+            completedAt:
+              type: string
+              format: date-time
+              nullable: true
+            status:
+              type: string
+              example: NORMAL
+      required:
+        - verified
+        - walletAddress
+        - access_token
+        - user
+    SocialConnectionStatusDto:
+      type: object
+      properties:
+        connected:
+          type: boolean
+          example: true
+          description: Whether the service is connected
+        username:
+          type: string
+          example: username123
+          description: Username on the platform
+        userId:
+          type: string
+          example: '123456789'
+          description: Platform user ID
+        verified:
+          type: boolean
+          example: true
+          description: Additional verification status (joined/followed)
+        connectedAt:
+          format: date-time
+          type: string
+          description: Connection timestamp
+      required:
+        - connected
+        - username
+        - userId
+        - verified
+        - connectedAt

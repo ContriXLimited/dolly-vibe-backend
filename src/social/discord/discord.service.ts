@@ -16,10 +16,13 @@ export class DiscordService {
   /**
    * 获取Discord OAuth URL
    */
-  getOAuthUrl(walletAddress?: string): string {
+  getOAuthUrl(walletAddress?: string, callbackUrl?: string): string {
     const clientId = this.configService.get<string>('DISCORD_CLIENT_ID');
-    const redirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+    const defaultRedirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+    const redirectUri = callbackUrl || defaultRedirectUri;
     const state = this.generateState(walletAddress);
+
+    this.logger.log(`Generating Discord OAuth URL with redirect URI: ${redirectUri}`);
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -35,7 +38,7 @@ export class DiscordService {
   /**
    * 处理Discord OAuth回调
    */
-  async handleOAuthCallback(code: string, state?: string) {
+  async handleOAuthCallback(code: string, state?: string, callbackUrl?: string) {
     try {
       // 验证state参数（实际应用中应该验证state的有效性）
       if (!code) {
@@ -45,7 +48,7 @@ export class DiscordService {
       this.logger.log(`Processing Discord OAuth callback with code: ${code.substring(0, 10)}...`);
 
       // 交换访问令牌
-      const tokenData = await this.exchangeCodeForToken(code);
+      const tokenData = await this.exchangeCodeForToken(code, callbackUrl);
       this.logger.log('Successfully exchanged code for token');
       
       // 获取用户信息
@@ -176,10 +179,11 @@ export class DiscordService {
   /**
    * 交换授权码为访问令牌
    */
-  private async exchangeCodeForToken(code: string) {
+  private async exchangeCodeForToken(code: string, callbackUrl?: string) {
     const clientId = this.configService.get<string>('DISCORD_CLIENT_ID');
     const clientSecret = this.configService.get<string>('DISCORD_CLIENT_SECRET');
-    const redirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+    const defaultRedirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+    const redirectUri = callbackUrl || defaultRedirectUri;
 
     this.logger.log(`Exchanging code for token with redirect URI: ${redirectUri}`);
 

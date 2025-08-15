@@ -16,10 +16,10 @@ export class TwitterService {
   /**
    * 获取Twitter OAuth URL (OAuth 1.0a)
    */
-  async getOAuthUrl(walletAddress?: string): Promise<string> {
+  async getOAuthUrl(walletAddress?: string, callbackUrl?: string): Promise<string> {
     try {
       // Step 1: Get request token
-      const requestTokenResponse = await this.getRequestToken();
+      const requestTokenResponse = await this.getRequestToken(callbackUrl);
       
       // Step 2: Cache wallet address with oauth token (if provided)
       if (walletAddress) {
@@ -29,6 +29,7 @@ export class TwitterService {
       // Step 3: Redirect user to Twitter authorization
       const authUrl = `https://api.twitter.com/oauth/authenticate?oauth_token=${requestTokenResponse.oauth_token}`;
       
+      this.logger.log(`Generated Twitter OAuth URL with callback: ${callbackUrl || 'default'}`);
       return authUrl;
 
     } catch (error) {
@@ -175,10 +176,13 @@ export class TwitterService {
   /**
    * 获取请求令牌 (OAuth 1.0a Step 1)
    */
-  private async getRequestToken() {
+  private async getRequestToken(callbackUrl?: string) {
     const consumerKey = this.configService.get<string>('TWITTER_CONSUMER_KEY');
     const consumerSecret = this.configService.get<string>('TWITTER_CONSUMER_SECRET');
-    const callbackUrl = this.configService.get<string>('TWITTER_CALLBACK_URL');
+    const defaultCallbackUrl = this.configService.get<string>('TWITTER_CALLBACK_URL');
+    const actualCallbackUrl = callbackUrl || defaultCallbackUrl;
+
+    this.logger.log(`Getting Twitter request token with callback: ${actualCallbackUrl}`);
 
     // 实际应用中需要实现OAuth 1.0a签名
     // 这里简化处理，推荐使用oauth-1.0a库
@@ -196,7 +200,7 @@ export class TwitterService {
     const requestData = {
       url: 'https://api.twitter.com/oauth/request_token',
       method: 'POST',
-      data: { oauth_callback: callbackUrl },
+      data: { oauth_callback: actualCallbackUrl },
     };
 
     const response = await axios.post(requestData.url, null, {

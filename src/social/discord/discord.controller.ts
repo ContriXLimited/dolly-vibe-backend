@@ -32,7 +32,8 @@ export class DiscordController {
       type: 'object',
       properties: {
         oauthUrl: { type: 'string', example: 'https://discord.com/api/oauth2/authorize?...' },
-        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' }
+        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' },
+        callbackUrl: { type: 'string', example: 'https://custom-domain.com/callback' }
       }
     }
   })
@@ -42,14 +43,24 @@ export class DiscordController {
     description: 'Wallet address to bind Discord account to',
     example: '0x1234567890123456789012345678901234567890'
   })
-  getOAuthUrl(@Query('walletAddress') walletAddress: string) {
+  @ApiQuery({ 
+    name: 'callbackUrl', 
+    required: false,
+    description: 'Custom callback URL (optional, uses .env default if not provided)',
+    example: 'https://custom-domain.com/auth/discord/callback'
+  })
+  getOAuthUrl(
+    @Query('walletAddress') walletAddress: string,
+    @Query('callbackUrl') callbackUrl?: string,
+  ) {
     if (!walletAddress) {
       throw new BadRequestException('Wallet address is required');
     }
-    const url = this.discordService.getOAuthUrl(walletAddress);
+    const url = this.discordService.getOAuthUrl(walletAddress, callbackUrl);
     return {
       oauthUrl: url,
-      walletAddress: walletAddress
+      walletAddress: walletAddress,
+      callbackUrl: callbackUrl || 'default from .env'
     };
   }
 
@@ -65,11 +76,21 @@ export class DiscordController {
     description: 'Wallet address to bind Discord account to',
     example: '0x1234567890123456789012345678901234567890'
   })
-  startOAuth(@Query('walletAddress') walletAddress: string, @Res() res) {
+  @ApiQuery({ 
+    name: 'callbackUrl', 
+    required: false,
+    description: 'Custom callback URL (optional)',
+    example: 'https://custom-domain.com/auth/discord/callback'
+  })
+  startOAuth(
+    @Query('walletAddress') walletAddress: string, 
+    @Query('callbackUrl') callbackUrl: string,
+    @Res() res
+  ) {
     if (!walletAddress) {
       throw new BadRequestException('Wallet address is required');
     }
-    const url = this.discordService.getOAuthUrl(walletAddress);
+    const url = this.discordService.getOAuthUrl(walletAddress, callbackUrl);
     return res.redirect(url);
   }
 
@@ -92,15 +113,17 @@ export class DiscordController {
   @ApiResponse({ status: 400, description: 'OAuth callback failed' })
   @ApiQuery({ name: 'code', description: 'Discord authorization code' })
   @ApiQuery({ name: 'state', required: false, description: 'OAuth state parameter' })
+  @ApiQuery({ name: 'callbackUrl', required: false, description: 'Original callback URL used for token exchange' })
   async handleCallback(
     @Query('code') code: string,
     @Query('state') state?: string,
+    @Query('callbackUrl') callbackUrl?: string,
   ) {
     if (!code) {
       throw new BadRequestException('Missing authorization code');
     }
 
-    const result = await this.discordService.handleOAuthCallback(code, state);
+    const result = await this.discordService.handleOAuthCallback(code, state, callbackUrl);
     
     // 从state中获取walletAddress并更新用户连接状态
     const walletAddress = this.discordService.extractWalletAddressFromState(state);
