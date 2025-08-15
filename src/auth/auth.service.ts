@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { Client, ClientStatus } from '@prisma/client';
+import { Client, ClientStatus, VibeUserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -14,49 +14,71 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateClient(email: string, password: string): Promise<any> {
-    const client = await this.prisma.client.findUnique({
-      where: { email },
+  async validateVibeUser(walletAddress: string): Promise<any> {
+    const vibeUser = await this.prisma.vibeUser.findFirst({
+      where: { 
+        walletAddress: walletAddress.toLowerCase(),
+        status: VibeUserStatus.NORMAL, // 确保用户状态正常
+      },
     });
 
-    if (client && 
-        client.status === ClientStatus.NORMAL &&
-        (await bcrypt.compare(password, client.passwordHash))) {
-      const { passwordHash, ...result } = client;
-      return result;
+    if (!vibeUser) {
+      return null;
     }
-    return null;
+
+    // 检查是否完成所有必要的连接和验证
+    const isFullyVerified = 
+      vibeUser.walletConnected &&     // 钱包已连接
+      vibeUser.discordConnected &&    // Discord已连接
+      vibeUser.twitterConnected &&    // Twitter已连接
+      vibeUser.isJoined &&            // 已加入Discord服务器
+      vibeUser.isFollowed &&          // 已关注Twitter
+      vibeUser.allConnected;          // 全部连接完成
+
+    if (!isFullyVerified) {
+      return null;
+    }
+
+    return vibeUser;
   }
 
   async login(loginDto: LoginDto) {
-    const client = await this.validateClient(loginDto.email, loginDto.password);
-    if (!client) {
-      throw new UnauthorizedException('Invalid credentials');
+    const vibeUser = await this.validateVibeUser(loginDto.walletAddress);
+    if (!vibeUser) {
+      throw new UnauthorizedException(
+        'Access denied. Please complete all verification steps: wallet connection, Discord join, and Twitter follow.'
+      );
     }
 
-    // Update last login time
-    await this.prisma.client.update({
-      where: { id: client.id },
-      data: { lastLoginAt: new Date() },
-    });
-
     const payload = { 
-      email: client.email, 
-      sub: client.id, 
-      username: client.username,
-      status: client.status 
+      walletAddress: vibeUser.walletAddress,
+      sub: vibeUser.id, 
+      discordId: vibeUser.discordId,
+      twitterId: vibeUser.twitterId,
+      discordUsername: vibeUser.discordUsername,
+      twitterUsername: vibeUser.twitterUsername,
+      status: vibeUser.status,
+      allConnected: vibeUser.allConnected,
+      completedAt: vibeUser.completedAt
     };
     
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: client.id,
-        email: client.email,
-        username: client.username,
-        avatar: client.avatar,
-        discordId: client.discordId,
-        telegramId: client.telegramId,
-        status: client.status,
+        id: vibeUser.id,
+        walletAddress: vibeUser.walletAddress,
+        discordId: vibeUser.discordId,
+        twitterId: vibeUser.twitterId,
+        discordUsername: vibeUser.discordUsername,
+        twitterUsername: vibeUser.twitterUsername,
+        discordConnected: vibeUser.discordConnected,
+        twitterConnected: vibeUser.twitterConnected,
+        walletConnected: vibeUser.walletConnected,
+        isJoined: vibeUser.isJoined,
+        isFollowed: vibeUser.isFollowed,
+        allConnected: vibeUser.allConnected,
+        completedAt: vibeUser.completedAt,
+        status: vibeUser.status,
       },
     };
   }
@@ -86,10 +108,30 @@ export class AuthService {
     return result;
   }
 
+  async findVibeUserById(id: string) {
+    return this.prisma.vibeUser.findUnique({
+      where: { id },
+    });
+  }
+
   async findClientById(id: string): Promise<Client | null> {
     return this.prisma.client.findUnique({
       where: { id },
     });
+  }
+
+  async validateClient(email: string, password: string): Promise<any> {
+    const client = await this.prisma.client.findUnique({
+      where: { email },
+    });
+
+    if (client && 
+        client.status === ClientStatus.NORMAL &&
+        (await bcrypt.compare(password, client.passwordHash))) {
+      const { passwordHash, ...result } = client;
+      return result;
+    }
+    return null;
   }
 
   // Legacy method for backward compatibility

@@ -10,6 +10,7 @@ export interface UserConnectionStatus {
     username?: string;
     userId?: string;
     verified: boolean; // 是否加入0G Discord
+    isJoined: boolean; // 是否加入Discord服务器
     connectedAt?: Date;
   };
   twitter: {
@@ -17,6 +18,7 @@ export interface UserConnectionStatus {
     username?: string;
     userId?: string;
     verified: boolean; // 是否关注Dolly
+    isFollowed: boolean; // 是否关注Dolly Twitter
     connectedAt?: Date;
   };
   wallet: {
@@ -60,6 +62,7 @@ export class UserStatusService {
         username: user.discordUsername,
         userId: user.discordId,
         verified: user.isJoined,
+        isJoined: user.isJoined,
         connectedAt: user.discordConnected ? user.updatedAt : null,
       },
       twitter: {
@@ -67,6 +70,7 @@ export class UserStatusService {
         username: user.twitterUsername,
         userId: user.twitterId,
         verified: user.isFollowed,
+        isFollowed: user.isFollowed,
         connectedAt: user.twitterConnected ? user.updatedAt : null,
       },
       wallet: {

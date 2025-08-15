@@ -1,7 +1,23 @@
 openapi: 3.0.0
 info:
   title: Dolly Vibe API
-  description: The Dolly Vibe API documentation with VibeUser management, authentication, and more
+  description: |
+    The Dolly Vibe API provides comprehensive user management, authentication, and social media integration capabilities.
+    
+    This API supports:
+    - User authentication and authorization
+    - Social media integration (Discord, Twitter)
+    - Wallet verification and blockchain interaction
+    - User status tracking and analytics
+    
+    ## Authentication
+    Most endpoints require JWT bearer token authentication. Obtain tokens via the `/auth/login` endpoint.
+    
+    ## Rate Limiting
+    API requests are rate-limited. Please implement appropriate retry logic in your applications.
+    
+    ## Support
+    For API support, please contact our team at support@dollyvibe.com
   version: 1.0.0
   contact:
     name: Dolly Vibe Team
@@ -10,10 +26,13 @@ info:
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
+  termsOfService: https://dollyvibe.com/terms
 
 servers:
   - url: http://localhost:3000
-    description: Development server
+    description: Development server (local testing)
+  - url: https://staging-api.dollyvibe.com
+    description: Staging server (pre-production)
   - url: https://api.dollyvibe.com
     description: Production server
 
@@ -272,6 +291,10 @@ components:
               type: boolean
               example: true
               description: "是否加入0G Discord"
+            isJoined:
+              type: boolean
+              example: true
+              description: "是否加入Discord服务器"
             connectedAt:
               type: string
               format: date-time
@@ -291,6 +314,10 @@ components:
               type: boolean
               example: true
               description: "是否关注Dolly"
+            isFollowed:
+              type: boolean
+              example: true
+              description: "是否关注Dolly Twitter"
             connectedAt:
               type: string
               format: date-time
@@ -341,21 +368,60 @@ components:
             discord:
               type: integer
               example: 850
+              description: "Connected Discord accounts"
             twitter:
               type: integer
               example: 800
+              description: "Connected Twitter accounts"
             wallet:
               type: integer
               example: 900
+              description: "Connected wallet addresses"
         verified:
           type: object
           properties:
             joinedDiscord:
               type: integer
               example: 700
+              description: "Users who joined Discord server"
             followedTwitter:
               type: integer
               example: 650
+              description: "Users who followed Twitter account"
+
+    OAuthUrlResponse:
+      type: object
+      properties:
+        oauthUrl:
+          type: string
+          description: "OAuth authorization URL"
+        walletAddress:
+          type: string
+          description: "Wallet address to bind the account to"
+      required:
+        - oauthUrl
+        - walletAddress
+
+    TwitterFollowCheckResponse:
+      type: object
+      properties:
+        isFollowing:
+          type: boolean
+          description: "Whether the user is following the target account"
+        sourceUser:
+          type: string
+          description: "Username being checked"
+        targetUser:
+          type: string
+          description: "Target username (Dolly's account)"
+        message:
+          type: string
+          description: "Descriptive message about the follow status"
+      required:
+        - isFollowing
+        - sourceUser
+        - targetUser
+        - message
 
 tags:
   - name: Authentication
@@ -789,8 +855,6 @@ paths:
       tags:
         - Wallet Verification
       summary: 检查钱包连接状态
-      security:
-        - BearerAuth: []
       parameters:
         - name: walletAddress
           in: query
@@ -806,15 +870,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WalletStatusResponse'
-        '401':
-          description: Unauthorized
+        '400':
+          description: Invalid wallet address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # Discord Integration APIs
+  /auth/discord/oauth-url:
+    get:
+      tags:
+        - Discord Integration
+      summary: 获取Discord OAuth授权URL
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Wallet address to bind Discord account to
+      responses:
+        '200':
+          description: Discord OAuth URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthUrlResponse'
+              example:
+                oauthUrl: "https://discord.com/api/oauth2/authorize?client_id=..."
+                walletAddress: "0x1234567890123456789012345678901234567890"
+        '400':
+          description: Wallet address is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /auth/discord/oauth:
     get:
       tags:
         - Discord Integration
-      summary: 启动Discord OAuth授权流程
+      summary: 启动Discord OAuth授权流程 (重定向版本)
       parameters:
         - name: walletAddress
           in: query
@@ -870,16 +968,22 @@ paths:
                   message:
                     type: string
                     example: "Discord connection successful"
+                  walletAddress:
+                    type: string
+                    example: "0x1234567890123456789012345678901234567890"
+                    description: "Wallet address bound to this Discord account"
         '400':
           description: OAuth callback failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/discord/status:
     get:
       tags:
         - Discord Integration
       summary: 检查Discord连接状态
-      security:
-        - BearerAuth: []
       parameters:
         - name: discordId
           in: query
@@ -916,11 +1020,49 @@ paths:
                     example: "0G Network"
 
   # Twitter Integration APIs
+  /auth/twitter/oauth-url:
+    get:
+      tags:
+        - Twitter Integration
+      summary: 获取Twitter OAuth授权URL
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Wallet address to bind Twitter account to
+      responses:
+        '200':
+          description: Twitter OAuth URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthUrlResponse'
+              example:
+                oauthUrl: "https://api.twitter.com/oauth/authorize?oauth_token=..."
+                walletAddress: "0x1234567890123456789012345678901234567890"
+        '400':
+          description: Wallet address is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /auth/twitter/oauth:
     get:
       tags:
         - Twitter Integration
-      summary: 启动Twitter OAuth授权流程
+      summary: 启动Twitter OAuth授权流程 (重定向版本)
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Wallet address to bind Twitter account to
       responses:
         '302':
           description: Redirect to Twitter OAuth page
@@ -943,6 +1085,13 @@ paths:
           schema:
             type: string
           description: Twitter OAuth verifier
+        - name: walletAddress
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Optional wallet address to bind to this Twitter account
       responses:
         '200':
           description: Twitter OAuth completed successfully
@@ -969,16 +1118,22 @@ paths:
                   message:
                     type: string
                     example: "Twitter connection successful"
+                  walletAddress:
+                    type: string
+                    example: "0x1234567890123456789012345678901234567890"
+                    description: "Wallet address bound to this Twitter account"
         '400':
           description: OAuth callback failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/twitter/status:
     get:
       tags:
         - Twitter Integration
       summary: 检查Twitter连接状态
-      security:
-        - BearerAuth: []
       parameters:
         - name: twitterId
           in: query
@@ -993,6 +1148,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SocialConnectionStatus'
+
+  /auth/twitter/check-follow:
+    get:
+      tags:
+        - Twitter Integration
+      summary: 检查用户是否关注Dolly Twitter
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "dollyuser"
+          description: Twitter username to check
+      responses:
+        '200':
+          description: Follow status checked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwitterFollowCheckResponse'
+              example:
+                isFollowing: true
+                sourceUser: "dollyuser"
+                targetUser: "DollyAI"
+                message: "User is following Dolly"
+        '400':
+          description: Invalid username or API error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/twitter/dolly-profile:
     get:
@@ -1023,8 +1216,6 @@ paths:
       tags:
         - User Connection Status
       summary: 获取用户所有连接状态
-      security:
-        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -1085,8 +1276,6 @@ paths:
       tags:
         - User Connection Status
       summary: 更新用户Discord连接状态
-      security:
-        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1120,8 +1309,6 @@ paths:
       tags:
         - User Connection Status
       summary: 更新用户Twitter连接状态
-      security:
-        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1155,8 +1342,6 @@ paths:
       tags:
         - User Connection Status
       summary: 更新用户钱包连接状态
-      security:
-        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1180,6 +1365,50 @@ paths:
       responses:
         '200':
           description: Wallet status updated successfully
+
+  /auth/user/status-by-wallet:
+    get:
+      tags:
+        - User Connection Status
+      summary: 根据Wallet地址获取用户完整状态
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x1234567890123456789012345678901234567890"
+          description: Ethereum wallet address
+      responses:
+        '200':
+          description: User status retrieved successfully by wallet address
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vibeUserId:
+                    type: string
+                    example: "clj123456789"
+                    description: "VibeUser ID"
+                  walletAddress:
+                    type: string
+                    example: "0x1234567890123456789012345678901234567890"
+                    description: "Wallet address"
+                  status:
+                    $ref: '#/components/schemas/UserConnectionStatus'
+        '400':
+          description: Invalid wallet address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found with this wallet address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/user/stats:
     get:

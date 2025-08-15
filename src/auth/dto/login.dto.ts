@@ -1,13 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class LoginDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ 
+    example: '0x1234567890123456789012345678901234567890',
+    description: 'Ethereum wallet address'
+  })
   @IsString()
-  @MinLength(6)
-  password: string;
+  @Matches(/^0x[a-fA-F0-9]{40}$/, {
+    message: 'Invalid wallet address format'
+  })
+  walletAddress: string;
 }

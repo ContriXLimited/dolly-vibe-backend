@@ -18,15 +18,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    const client = await this.authService.findClientById(payload.sub);
+    const vibeUser = await this.authService.findVibeUserById(payload.sub);
+    if (!vibeUser) {
+      return null;
+    }
+    
     return {
-      id: client.id,
-      email: client.email,
-      username: client.username,
-      avatar: client.avatar,
-      discordId: client.discordId,
-      telegramId: client.telegramId,
-      status: client.status,
+      id: vibeUser.id,
+      walletAddress: vibeUser.walletAddress,
+      discordId: vibeUser.discordId,
+      twitterId: vibeUser.twitterId,
+      discordUsername: vibeUser.discordUsername,
+      twitterUsername: vibeUser.twitterUsername,
+      discordConnected: vibeUser.discordConnected,
+      twitterConnected: vibeUser.twitterConnected,
+      walletConnected: vibeUser.walletConnected,
+      isJoined: vibeUser.isJoined,
+      isFollowed: vibeUser.isFollowed,
+      allConnected: vibeUser.allConnected,
+      status: vibeUser.status,
     };
   }
 }

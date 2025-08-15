@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,8 +25,6 @@ export class UserStatusController {
   constructor(private readonly userStatusService: UserStatusService) {}
 
   @Get('status/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '获取用户所有连接状态' })
   @ApiResponse({ 
     status: 200, 
@@ -106,8 +105,6 @@ export class UserStatusController {
   }
 
   @Post('connect/discord')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '更新用户Discord连接状态' })
   @ApiResponse({ status: 200, description: 'Discord status updated successfully' })
   async updateDiscordConnection(
@@ -126,8 +123,6 @@ export class UserStatusController {
   }
 
   @Post('connect/twitter')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '更新用户Twitter连接状态' })
   @ApiResponse({ status: 200, description: 'Twitter status updated successfully' })
   async updateTwitterConnection(
@@ -146,8 +141,6 @@ export class UserStatusController {
   }
 
   @Post('connect/wallet')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '更新用户钱包连接状态' })
   @ApiResponse({ status: 200, description: 'Wallet status updated successfully' })
   async updateWalletConnection(
@@ -161,6 +154,96 @@ export class UserStatusController {
       walletAddress: body.walletAddress,
       verified: body.verified,
     });
+  }
+
+  @Get('status-by-wallet')
+  @ApiOperation({ summary: '根据Wallet地址获取用户完整状态' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'User status retrieved successfully by wallet address',
+    schema: {
+      type: 'object',
+      properties: {
+        vibeUserId: {
+          type: 'string',
+          example: 'clj123456789',
+          description: 'VibeUser ID'
+        },
+        walletAddress: {
+          type: 'string',
+          example: '0x1234567890123456789012345678901234567890',
+          description: 'Wallet address'
+        },
+        status: {
+          type: 'object',
+          properties: {
+            discord: {
+              type: 'object',
+              properties: {
+                connected: { type: 'boolean', example: true },
+                username: { type: 'string', example: 'user#1234' },
+                userId: { type: 'string', example: '123456789' },
+                isJoined: { type: 'boolean', example: true, description: '是否加入Discord服务器' },
+                connectedAt: { type: 'string', format: 'date-time' }
+              }
+            },
+            twitter: {
+              type: 'object',
+              properties: {
+                connected: { type: 'boolean', example: true },
+                username: { type: 'string', example: 'dollyuser' },
+                userId: { type: 'string', example: '987654321' },
+                isFollowed: { type: 'boolean', example: true, description: '是否关注Dolly Twitter' },
+                connectedAt: { type: 'string', format: 'date-time' }
+              }
+            },
+            wallet: {
+              type: 'object',
+              properties: {
+                connected: { type: 'boolean', example: true },
+                walletAddress: { type: 'string', example: '0x123...789' },
+                verifiedAt: { type: 'string', format: 'date-time' }
+              }
+            },
+            overall: {
+              type: 'object',
+              properties: {
+                allConnected: { type: 'boolean', example: true },
+                completedAt: { type: 'string', format: 'date-time' },
+                canProceed: { type: 'boolean', example: true, description: '是否可以点击Let\'s Vibe按钮' }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'User not found with this wallet address' 
+  })
+  @ApiQuery({ 
+    name: 'walletAddress', 
+    required: true, 
+    description: 'Ethereum wallet address',
+    example: '0x1234567890123456789012345678901234567890'
+  })
+  async getUserStatusByWallet(
+    @Query('walletAddress') walletAddress: string,
+  ): Promise<{ vibeUserId: string; walletAddress: string; status: UserConnectionStatus }> {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+
+    // 查找或创建用户
+    const vibeUserId = await this.userStatusService.findOrCreateUser({
+      walletAddress,
+    });
+
+    // 获取用户状态
+    const status = await this.userStatusService.getUserStatus(vibeUserId);
+
+    return { vibeUserId, walletAddress, status };
   }
 
   @Get('stats')

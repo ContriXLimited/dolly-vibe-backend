@@ -138,8 +138,6 @@ export class TwitterController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '检查Twitter连接状态' })
   @ApiResponse({ 
     status: 200, 

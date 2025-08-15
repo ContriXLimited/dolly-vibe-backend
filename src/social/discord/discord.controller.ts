@@ -124,8 +124,6 @@ export class DiscordController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '检查Discord连接状态' })
   @ApiResponse({ 
     status: 200, 
