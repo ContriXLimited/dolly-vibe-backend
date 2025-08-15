@@ -117,6 +117,11 @@ export class WalletVerificationService {
         twitterId: vibeUser.twitterId,
         discordUsername: vibeUser.discordUsername,
         twitterUsername: vibeUser.twitterUsername,
+        discordConnected: vibeUser.discordConnected,
+        twitterConnected: vibeUser.twitterConnected,
+        walletConnected: vibeUser.walletConnected,
+        isJoined: vibeUser.isJoined,
+        isFollowed: vibeUser.isFollowed,
         status: vibeUser.status,
         allConnected: vibeUser.allConnected,
         completedAt: vibeUser.completedAt
