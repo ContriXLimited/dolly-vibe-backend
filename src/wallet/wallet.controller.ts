@@ -14,7 +14,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { WalletVerificationService } from './services/wallet-verification.service';
-import { GetNonceDto, VerifyWalletDto } from './dto/wallet-nonce.dto';
+import { GetNonceDto, VerifyWalletDto, WalletLoginResponseDto } from './dto/wallet-nonce.dto';
 
 @ApiTags('Wallet Verification')
 @Controller('auth/wallet')
@@ -48,20 +48,14 @@ export class WalletController {
   }
 
   @Post('verify')
-  @ApiOperation({ summary: '验证钱包签名' })
+  @ApiOperation({ summary: '验证钱包签名并登录（钱包连接即登录）' })
   @ApiResponse({ 
     status: 200, 
-    description: 'Wallet verified successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        verified: { type: 'boolean', example: true },
-        walletAddress: { type: 'string', example: '0x1234567890123456789012345678901234567890' }
-      }
-    }
+    description: 'Wallet verified successfully and user logged in',
+    type: WalletLoginResponseDto
   })
   @ApiResponse({ status: 400, description: 'Invalid signature or nonce' })
-  async verifyWallet(@Body() verifyWalletDto: VerifyWalletDto) {
+  async verifyWallet(@Body() verifyWalletDto: VerifyWalletDto): Promise<WalletLoginResponseDto> {
     return this.walletVerificationService.verifyWalletSignature(
       verifyWalletDto.walletAddress,
       verifyWalletDto.nonce,

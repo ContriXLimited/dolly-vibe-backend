@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { ethers } from 'ethers';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -11,6 +12,7 @@ export class WalletVerificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -103,13 +105,45 @@ export class WalletVerificationService {
       });
 
       // 创建或更新VibeUser记录
-      await this.createOrUpdateVibeUser(walletAddress.toLowerCase());
+      const vibeUser = await this.createOrUpdateVibeUser(walletAddress.toLowerCase());
 
       this.logger.log(`Wallet signature verified for ${walletAddress}`);
 
+      // 生成JWT token
+      const payload = { 
+        walletAddress: vibeUser.walletAddress,
+        sub: vibeUser.id, 
+        discordId: vibeUser.discordId,
+        twitterId: vibeUser.twitterId,
+        discordUsername: vibeUser.discordUsername,
+        twitterUsername: vibeUser.twitterUsername,
+        status: vibeUser.status,
+        allConnected: vibeUser.allConnected,
+        completedAt: vibeUser.completedAt
+      };
+      
+      const access_token = this.jwtService.sign(payload);
+
       return {
         verified: true,
-        walletAddress: walletAddress.toLowerCase(),
+        walletAddress: vibeUser.walletAddress,
+        access_token,
+        user: {
+          id: vibeUser.id,
+          walletAddress: vibeUser.walletAddress,
+          discordId: vibeUser.discordId,
+          twitterId: vibeUser.twitterId,
+          discordUsername: vibeUser.discordUsername,
+          twitterUsername: vibeUser.twitterUsername,
+          discordConnected: vibeUser.discordConnected,
+          twitterConnected: vibeUser.twitterConnected,
+          walletConnected: vibeUser.walletConnected,
+          isJoined: vibeUser.isJoined,
+          isFollowed: vibeUser.isFollowed,
+          allConnected: vibeUser.allConnected,
+          completedAt: vibeUser.completedAt,
+          status: vibeUser.status,
+        },
       };
 
     } catch (error) {
