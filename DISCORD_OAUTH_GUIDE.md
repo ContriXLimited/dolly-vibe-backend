@@ -152,35 +152,55 @@ graph TD
 ### 2. 用户状态查询
 
 #### 获取用户状态
-**接口:** `GET /social/user-status?walletAddress=0x...`
+**接口:** `GET /auth/user/status-by-wallet?walletAddress=0x...`
+
+**参数:**
+- `walletAddress` (必需): 以太坊钱包地址
 
 **响应:**
 ```json
 {
-  "walletAddress": "0x1234...",
-  "discordConnected": false,
-  "twitterConnected": false,
-  "walletConnected": true,
-  "isJoined": false,
-  "isFollowed": false,
-  "allConnected": false,
-  "completedAt": null,
-  "nextSteps": [
-    {
-      "platform": "discord",
-      "action": "connect",
-      "description": "Connect your Discord account and join the server",
-      "completed": false
+  "vibeUserId": "clj123456789",
+  "walletAddress": "0x1234567890123456789012345678901234567890",
+  "status": {
+    "discord": {
+      "connected": true,
+      "username": "user#1234",
+      "userId": "123456789",
+      "verified": true,
+      "isJoined": true,
+      "connectedAt": "2024-01-01T10:30:00.000Z"
     },
-    {
-      "platform": "twitter", 
-      "action": "connect",
-      "description": "Connect your Twitter account and follow our account",
-      "completed": false
+    "twitter": {
+      "connected": true,
+      "username": "dollyuser",
+      "userId": "987654321",
+      "verified": true,
+      "isFollowed": true,
+      "connectedAt": "2024-01-01T10:35:00.000Z"
+    },
+    "wallet": {
+      "connected": true,
+      "walletAddress": "0x1234567890123456789012345678901234567890",
+      "verifiedAt": "2024-01-01T10:25:00.000Z"
+    },
+    "overall": {
+      "allConnected": true,
+      "completedAt": "2024-01-01T10:35:00.000Z",
+      "canProceed": true
     }
-  ]
+  }
 }
 ```
+
+**状态字段说明:**
+- `discord.connected`: 是否已授权登录 Discord
+- `discord.isJoined`: 是否已加入指定 Discord 服务器
+- `twitter.connected`: 是否已授权登录 Twitter  
+- `twitter.isFollowed`: 是否已关注指定 Twitter 账号
+- `wallet.connected`: 是否已连接并验证钱包
+- `overall.allConnected`: 是否完成所有验证步骤
+- `overall.canProceed`: 是否可以进入应用主功能
 
 ### 3. Discord 授权相关
 
@@ -266,701 +286,157 @@ DISCORD_REDIRECT_URI="https://yourdomain.com/auth/discord/callback"
 DISCORD_GUILD_ID="你的Discord服务器ID"
 ```
 
-## 💻 前端实现示例
-
-### 1. React + TypeScript 完整登录实现
-
-```typescript
-// types/auth.ts
-export interface WalletLoginResponse {
-  verified: boolean;
-  walletAddress: string;
-  access_token: string;
-  user: {
-    id: string;
-    walletAddress: string;
-    discordConnected: boolean;
-    twitterConnected: boolean;
-    walletConnected: boolean;
-    isJoined: boolean;
-    isFollowed: boolean;
-    allConnected: boolean;
-    status: string;
-  };
-}
-
-export interface UserStatus {
-  walletAddress: string;
-  discordConnected: boolean;
-  twitterConnected: boolean;
-  walletConnected: boolean;
-  isJoined: boolean;
-  isFollowed: boolean;
-  allConnected: boolean;
-  completedAt?: string;
-  nextSteps: {
-    platform: string;
-    action: string;
-    description: string;
-  }[];
-}
-
-export interface OAuthResponse {
-  oauthUrl: string;
-  walletAddress: string;
-}
-
-// services/authService.ts
-import axios from 'axios';
-
-const API_BASE_URL = 'https://yourdomain.com/api';
-
-export class AuthService {
-  private static token: string | null = null;
-
-  /**
-   * 设置 axios 默认 headers
-   */
-  static setAuthToken(token: string) {
-    this.token = token;
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  }
-
-  /**
-   * 获取钱包签名 nonce
-   */
-  static async getWalletNonce(walletAddress: string) {
-    const response = await axios.get(`${API_BASE_URL}/auth/wallet/nonce`, {
-      params: { walletAddress }
-    });
-    return response.data;
-  }
-
-  /**
-   * 验证钱包签名并登录
-   */
-  static async verifyWallet(walletAddress: string, nonce: string, signature: string): Promise<WalletLoginResponse> {
-    const response = await axios.post(`${API_BASE_URL}/auth/wallet/verify`, {
-      walletAddress,
-      nonce,
-      signature
-    });
-    return response.data;
-  }
-
-  /**
-   * 获取用户状态
-   */
-  static async getUserStatus(walletAddress: string): Promise<UserStatus> {
-    const response = await axios.get(`${API_BASE_URL}/social/user-status`, {
-      params: { walletAddress }
-    });
-    return response.data;
-  }
-
-  /**
-   * 获取 Discord OAuth URL
-   */
-  static async getDiscordOAuthUrl(walletAddress: string): Promise<OAuthResponse> {
-    const response = await axios.get(`${API_BASE_URL}/auth/discord/oauth-url`, {
-      params: { walletAddress }
-    });
-    return response.data;
-  }
-
-  /**
-   * 获取 Twitter OAuth URL
-   */
-  static async getTwitterOAuthUrl(walletAddress: string): Promise<OAuthResponse> {
-    const response = await axios.get(`${API_BASE_URL}/auth/twitter/oauth-url`, {
-      params: { walletAddress }
-    });
-    return response.data;
-  }
-}
-
-// hooks/useWalletLogin.ts
-import { useState, useCallback } from 'react';
-import { ethers } from 'ethers';
-import { AuthService } from '../services/authService';
-
-export const useWalletLogin = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const connectWallet = useCallback(async () => {
-    if (!window.ethereum) {
-      setError('请安装 MetaMask 钱包');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // 连接钱包
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
-      
-      setWalletAddress(address);
-
-      // 获取 nonce
-      const { nonce, message } = await AuthService.getWalletNonce(address);
-      
-      // 签名
-      const signature = await signer.signMessage(message);
-      
-      // 验证签名并登录
-      const loginResult = await AuthService.verifyWallet(address, nonce, signature);
-      
-      // 设置 token
-      AuthService.setAuthToken(loginResult.access_token);
-      
-      setIsLoggedIn(true);
-      return loginResult;
-
-    } catch (error) {
-      setError(error instanceof Error ? error.message : '连接钱包失败');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  return {
-    connectWallet,
-    walletAddress,
-    isLoading,
-    error,
-    isLoggedIn
-  };
-};
-
-// hooks/useUserStatus.ts
-import { useState, useEffect, useCallback } from 'react';
-import { AuthService } from '../services/authService';
-import { UserStatus } from '../types/auth';
-
-export const useUserStatus = (walletAddress: string | null) => {
-  const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchUserStatus = useCallback(async () => {
-    if (!walletAddress) return;
-
-    try {
-      setIsLoading(true);
-      const status = await AuthService.getUserStatus(walletAddress);
-      setUserStatus(status);
-    } catch (error) {
-      console.error('Failed to fetch user status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [walletAddress]);
-
-  useEffect(() => {
-    fetchUserStatus();
-  }, [fetchUserStatus]);
-
-  return {
-    userStatus,
-    isLoading,
-    refetchStatus: fetchUserStatus
-  };
-};
-
-// components/LoginFlow.tsx
-import React, { useState, useEffect } from 'react';
-import { useWalletLogin } from '../hooks/useWalletLogin';
-import { useUserStatus } from '../hooks/useUserStatus';
-import { AuthService } from '../services/authService';
-
-export const LoginFlow: React.FC = () => {
-  const { connectWallet, walletAddress, isLoading: walletLoading, error: walletError, isLoggedIn } = useWalletLogin();
-  const { userStatus, isLoading: statusLoading, refetchStatus } = useUserStatus(walletAddress);
-  const [currentStep, setCurrentStep] = useState<'wallet' | 'auth' | 'complete'>('wallet');
-
-  useEffect(() => {
-    if (isLoggedIn && userStatus) {
-      // 检查所有验证是否完成：
-      // 1. 钱包已连接
-      // 2. Discord 已连接且已加入服务器
-      // 3. Twitter 已连接且已关注账号
-      const allComplete = userStatus.walletConnected && 
-                         userStatus.discordConnected && userStatus.isJoined &&
-                         userStatus.twitterConnected && userStatus.isFollowed;
-      
-      if (allComplete) {
-        setCurrentStep('complete');
-      } else {
-        setCurrentStep('auth');
-      }
-    }
-  }, [isLoggedIn, userStatus]);
-
-  const handleOAuthRedirect = async (platform: 'discord' | 'twitter') => {
-    if (!walletAddress) return;
-
-    try {
-      const getOAuthUrl = platform === 'discord' 
-        ? AuthService.getDiscordOAuthUrl 
-        : AuthService.getTwitterOAuthUrl;
-      
-      const { oauthUrl } = await getOAuthUrl(walletAddress);
-      window.location.href = oauthUrl;
-    } catch (error) {
-      console.error(`${platform} OAuth failed:`, error);
-    }
-  };
-
-  // 钱包连接步骤
-  if (currentStep === 'wallet') {
-    return (
-      <div className="login-step wallet-step">
-        <h2>连接钱包</h2>
-        <p>首先需要连接您的钱包进行身份验证</p>
-        <button 
-          onClick={connectWallet}
-          disabled={walletLoading}
-          className="wallet-connect-btn"
-        >
-          {walletLoading ? '连接中...' : '连接 MetaMask'}
-        </button>
-        {walletError && <p className="error">{walletError}</p>}
-      </div>
-    );
-  }
-
-  // 授权验证步骤
-  if (currentStep === 'auth' && userStatus) {
-    return (
-      <div className="login-step auth-step">
-        <h2>完成授权验证</h2>
-        <p>钱包地址: {walletAddress}</p>
-        
-        <div className="auth-progress">
-          <div className={`auth-item ${userStatus.walletConnected ? 'completed' : ''}`}>
-            <span>✓</span> 钱包连接
-          </div>
-          
-          <div className={`auth-item ${userStatus.discordConnected && userStatus.isJoined ? 'completed' : ''}`}>
-            <span>{userStatus.discordConnected && userStatus.isJoined ? '✓' : '○'}</span>
-            Discord 授权 & 加入服务器
-            {!(userStatus.discordConnected && userStatus.isJoined) && (
-              <button 
-                onClick={() => handleOAuthRedirect('discord')}
-                className="oauth-btn discord-btn"
-              >
-                连接 Discord
-              </button>
-            )}
-          </div>
-          
-          <div className={`auth-item ${userStatus.twitterConnected && userStatus.isFollowed ? 'completed' : ''}`}>
-            <span>{userStatus.twitterConnected && userStatus.isFollowed ? '✓' : '○'}</span>
-            Twitter 授权 & 关注账号
-            {!(userStatus.twitterConnected && userStatus.isFollowed) && (
-              <button 
-                onClick={() => handleOAuthRedirect('twitter')}
-                className="oauth-btn twitter-btn"
-              >
-                连接 Twitter
-              </button>
-            )}
-          </div>
-        </div>
-
-        <button 
-          onClick={refetchStatus}
-          disabled={statusLoading}
-          className="refresh-btn"
-        >
-          {statusLoading ? '检查中...' : '刷新状态'}
-        </button>
-      </div>
-    );
-  }
-
-  // 完成步骤
-  if (currentStep === 'complete') {
-    return (
-      <div className="login-step complete-step">
-        <h2>🎉 登录完成！</h2>
-        <p>所有验证已完成，您现在可以使用应用的全部功能。</p>
-        <button 
-          onClick={() => window.location.href = '/dashboard'}
-          className="continue-btn"
-        >
-          进入应用
-        </button>
-      </div>
-    );
-  }
-
-  return null;
-};
-```
-
-### 2. 回调页面处理
-
-OAuth 授权完成后，需要在回调页面处理结果并引导用户返回主应用。
-
-```typescript
-// pages/auth/callback.tsx
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-
-export const AuthCallback: React.FC = () => {
-  const router = useRouter();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const success = urlParams.get('success');
-        const error = urlParams.get('error');
-        const platform = urlParams.get('platform'); // 'discord' 或 'twitter'
-
-        if (success === 'true') {
-          setStatus('success');
-          setMessage(`${platform === 'discord' ? 'Discord' : 'Twitter'} 连接成功！`);
-          
-          // 3秒后自动跳转回主页
-          setTimeout(() => {
-            router.push('/auth?step=verification');
-          }, 3000);
-        } else {
-          setStatus('error');
-          setMessage(error || '授权失败，请重试');
-        }
-      } catch (err) {
-        setStatus('error');
-        setMessage('处理回调时发生错误');
-      }
-    };
-
-    handleCallback();
-  }, [router]);
-
-  if (status === 'loading') {
-    return (
-      <div className="callback-page">
-        <div className="spinner">正在处理授权结果...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="callback-page">
-      <div className={`result ${status}`}>
-        <h2>{status === 'success' ? '🎉' : '❌'}</h2>
-        <p>{message}</p>
-        {status === 'success' ? (
-          <p>即将自动跳转...</p>
-        ) : (
-          <button onClick={() => router.push('/auth')}>
-            返回登录页面
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-```
-
-### 3. 样式参考
-
-```css
-/* styles/auth.css */
-.login-step {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 2rem;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.wallet-connect-btn, .oauth-btn, .continue-btn {
-  width: 100%;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.wallet-connect-btn {
-  background: #f7931a;
-  color: white;
-}
-
-.wallet-connect-btn:hover {
-  background: #e8850f;
-}
-
-.discord-btn {
-  background: #5865f2;
-  color: white;
-}
-
-.discord-btn:hover {
-  background: #4752c4;
-}
-
-.twitter-btn {
-  background: #1da1f2;
-  color: white;
-}
-
-.twitter-btn:hover {
-  background: #1a91da;
-}
-
-.auth-progress {
-  margin: 2rem 0;
-}
-
-.auth-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  margin: 0.5rem 0;
-  border-radius: 8px;
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-}
-
-.auth-item.completed {
-  background: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
-}
-
-.auth-item span {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  margin-right: 1rem;
-}
-
-.completed span {
-  background: #28a745;
-  color: white;
-}
-
-.error {
-  color: #dc3545;
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: #f8d7da;
-  border-radius: 4px;
-}
-
-.callback-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: #f8f9fa;
-}
-
-.result {
-  text-align: center;
-  padding: 2rem;
-  border-radius: 12px;
-  background: white;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.result.success {
-  border-top: 4px solid #28a745;
-}
-
-.result.error {
-  border-top: 4px solid #dc3545;
-}
-
-.spinner {
-  display: inline-block;
-  padding: 1rem;
-  color: #6c757d;
-}
-```
+## 💻 前端实现逻辑
+
+### 1. 核心组件结构
+
+前端应用需要实现以下核心组件和逻辑：
+
+#### 认证服务层 (AuthService)
+- 封装所有 API 调用，包括钱包验证、用户状态查询、OAuth URL 获取
+- 管理 JWT Token 的存储和请求头设置
+- 处理网络请求错误和重试逻辑
+
+#### 钱包连接 Hook (useWalletLogin)
+- 检测钱包插件(MetaMask)是否安装
+- 请求用户连接钱包并获取地址
+- 获取签名 nonce 并引导用户签名
+- 验证签名并获取 JWT Token
+- 管理连接状态和错误信息
+
+#### 用户状态 Hook (useUserStatus)  
+- 根据钱包地址查询用户完整状态
+- 定期刷新状态以获取最新的连接信息
+- 缓存状态数据以减少不必要的请求
+
+#### 登录流程组件 (LoginFlow)
+- 管理整个登录流程的状态机：钱包连接 → 授权验证 → 完成
+- 显示进度指示器，标明已完成和待完成的步骤
+- 根据用户状态动态显示相应的操作按钮
+- 处理 Discord/Twitter OAuth 重定向
+
+### 2. 状态管理逻辑
+
+#### 登录状态判断
+检查 `status.overall.allConnected` 字段来判断用户是否完成所有验证：
+- 钱包连接：`status.wallet.connected === true`
+- Discord 验证：`status.discord.connected === true && status.discord.isJoined === true`  
+- Twitter 验证：`status.twitter.connected === true && status.twitter.isFollowed === true`
+
+#### 步骤流转控制
+- **步骤1-钱包连接**：用户未连接钱包时显示连接按钮
+- **步骤2-授权验证**：钱包已连接但未完成社交媒体验证时显示授权页面
+- **步骤3-完成**：所有验证完成后显示成功页面并允许进入应用
+
+#### 实时状态同步
+- 监听钱包账户变化事件，账户切换时重新验证
+- OAuth 回调后自动刷新用户状态
+- 提供手动刷新按钮供用户主动更新状态
+
+### 3. OAuth 处理逻辑
+
+#### 授权发起
+- 调用对应平台的 OAuth URL 获取接口
+- 将钱包地址作为参数传递给后端
+- 使用 `window.location.href` 进行同窗口跳转（推荐）或弹窗方式
+
+#### 回调处理
+- 在回调页面解析 URL 参数获取授权结果
+- 显示授权成功/失败的反馈信息
+- 自动跳转回登录流程页面并刷新状态
+
+#### 状态验证
+- 授权完成后检查对应的连接状态和验证状态
+- 对于 Discord，需同时检查 `connected` 和 `isJoined`
+- 对于 Twitter，需同时检查 `connected` 和 `isFollowed`
 
 ## 🚀 快速开始指南
 
 ### 1. 基本集成步骤
 
-1. **安装依赖**
-```bash
-npm install ethers axios
-# 或
-yarn add ethers axios
-```
+1. **安装必要依赖**
+   - `ethers` - 用于钱包连接和签名操作
+   - HTTP 客户端库 - 用于 API 调用 (如 axios、fetch)
+   - 状态管理库 - 管理应用状态 (可选)
 
-2. **复制代码模板**
-   - 复制上述 `AuthService` 类到你的项目
-   - 复制 `useWalletLogin` 和 `useUserStatus` hooks
-   - 复制 `LoginFlow` 组件
+2. **实现核心服务**
+   - 创建认证服务类，封装所有 API 调用
+   - 实现钱包连接逻辑和签名验证
+   - 构建用户状态管理系统
 
 3. **配置环境变量**
-```bash
-# .env.local
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api
-```
+   - API 基础 URL
+   - 钱包网络配置
+   - OAuth 回调 URL
 
-4. **设置路由**
-   - 主登录页面: `/auth`
-   - 回调页面: `/auth/discord/callback` 和 `/auth/twitter/callback`
+4. **设置应用路由**
+   - 主登录页面
+   - OAuth 回调处理页面
+   - 登录成功后的跳转页面
 
 ### 2. 关键实现要点
 
 #### 钱包连接最佳实践
+- **连接检测**：页面加载时检查钱包是否已连接，避免重复请求授权
+- **账户监听**：监听钱包账户变化事件，用户切换账户时自动更新状态
+- **网络验证**：确保用户连接到正确的区块链网络
+- **错误处理**：处理用户拒绝连接、网络错误等异常情况
 
-```typescript
-// 检查钱包是否已连接
-const checkWalletConnection = async () => {
-  if (window.ethereum) {
-    const accounts = await window.ethereum.request({ 
-      method: 'eth_accounts' 
-    });
-    return accounts.length > 0 ? accounts[0] : null;
-  }
-  return null;
-};
+#### 状态持久化策略
+- **本地存储**：使用 localStorage 保存 JWT Token 和钱包地址
+- **状态恢复**：页面刷新时自动恢复登录状态
+- **安全清理**：登录失败或 Token 过期时清理本地存储
+- **跨标签同步**：使用 storage 事件同步多标签页的登录状态
 
-// 监听账户变化
-useEffect(() => {
-  if (window.ethereum) {
-    window.ethereum.on('accountsChanged', (accounts) => {
-      if (accounts.length === 0) {
-        // 用户断开连接
-        setWalletAddress(null);
-        setIsLoggedIn(false);
-      } else {
-        // 用户切换账户
-        setWalletAddress(accounts[0]);
-      }
-    });
-  }
-}, []);
-```
-
-#### 状态持久化
-
-```typescript
-// 在 localStorage 中保存登录状态
-const saveAuthState = (token: string, walletAddress: string) => {
-  localStorage.setItem('auth_token', token);
-  localStorage.setItem('wallet_address', walletAddress);
-};
-
-// 页面刷新时恢复状态
-const restoreAuthState = () => {
-  const token = localStorage.getItem('auth_token');
-  const walletAddress = localStorage.getItem('wallet_address');
-  
-  if (token && walletAddress) {
-    AuthService.setAuthToken(token);
-    setWalletAddress(walletAddress);
-    setIsLoggedIn(true);
-  }
-};
-```
-
-#### 错误处理
-
-```typescript
-const handleAuthError = (error: any) => {
-  console.error('Auth error:', error);
-  
-  // 清理状态
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('wallet_address');
-  setIsLoggedIn(false);
-  setWalletAddress(null);
-  
-  // 显示用户友好的错误信息
-  if (error.code === 4001) {
-    setError('用户取消了操作');
-  } else if (error.code === -32002) {
-    setError('请检查您的钱包，可能有待处理的请求');
-  } else {
-    setError('连接失败，请重试');
-  }
-};
-```
+#### 错误处理机制
+- **钱包错误**：区分用户取消、网络错误、权限不足等不同错误类型
+- **API 错误**：处理网络超时、服务器错误、认证失败等情况
+- **用户反馈**：提供清晰的错误信息和解决建议
+- **重试逻辑**：为临时性错误提供自动或手动重试选项
 
 ### 3. 测试和调试
 
-#### 开发环境测试
-
-```typescript
-// 添加调试日志
-const DEBUG = process.env.NODE_ENV === 'development';
-
-const debugLog = (message: string, data?: any) => {
-  if (DEBUG) {
-    console.log(`[Auth Debug] ${message}`, data);
-  }
-};
-
-// 在关键步骤添加日志
-debugLog('Starting wallet connection');
-debugLog('Nonce received', { nonce, message });
-debugLog('Signature created', { signature });
-debugLog('Login successful', loginResult);
-```
+#### 开发环境测试策略
+- **日志系统**：在关键步骤添加详细日志，便于问题排查
+- **模拟环境**：使用测试网络和模拟数据进行开发测试
+- **边界测试**：测试各种异常情况和边界条件
+- **跨浏览器测试**：确保在不同浏览器和设备上的兼容性
 
 #### 常见问题排查
+1. **钱包连接问题**
+   - 检查钱包插件安装和启用状态
+   - 验证网络配置和链 ID
+   - 确认用户权限和账户状态
 
-1. **钱包连接失败**
-   - 检查是否安装了 MetaMask
-   - 确认网络是否正确
-   - 检查控制台错误信息
+2. **签名验证问题**
+   - 检查 nonce 的有效期和格式
+   - 验证签名消息的完整性
+   - 确认钱包地址大小写处理
 
-2. **签名验证失败**
-   - 确认 nonce 未过期
-   - 检查消息格式是否正确
-   - 验证钱包地址是否匹配
-
-3. **OAuth 回调失败**
-   - 检查回调 URL 配置
-   - 确认 state 参数传递正确
-   - 验证服务器端配置
+3. **OAuth 流程问题**
+   - 验证回调 URL 配置的准确性
+   - 检查 state 参数的传递和解析
+   - 确认服务器端 OAuth 设置
 
 ### 4. 部署注意事项
 
-#### 生产环境配置
+#### 生产环境配置要点
+- **HTTPS 强制**: 钱包连接和 OAuth 授权必须在 HTTPS 环境下进行
+- **域名配置**: 确保所有回调 URL 与实际部署域名完全匹配
+- **环境变量**: 妥善管理 API 端点、OAuth 配置等敏感信息
+- **CDN 配置**: 考虑静态资源的 CDN 部署和缓存策略
 
-```bash
-# 生产环境变量
-NEXT_PUBLIC_API_BASE_URL=https://yourdomain.com/api
-DISCORD_REDIRECT_URI=https://yourdomain.com/auth/discord/callback
-TWITTER_REDIRECT_URI=https://yourdomain.com/auth/twitter/callback
-```
+#### 安全最佳实践
+1. **Token 管理**: 实施安全的 JWT 存储和传输机制
+2. **CORS 设置**: 严格控制跨域请求的来源域名
+3. **输入验证**: 对所有用户输入进行严格的前端验证
+4. **错误信息**: 避免在生产环境暴露敏感的调试信息
 
-#### 安全考虑
-
-1. **HTTPS 要求**: 生产环境必须使用 HTTPS
-2. **域名验证**: 确保回调 URL 域名与配置一致
-3. **Token 安全**: 使用 httpOnly cookies 存储敏感信息
-4. **CORS 设置**: 正确配置跨域访问
+#### 性能优化建议
+- **代码分割**: 按功能模块进行代码分割，减少初始加载时间
+- **状态缓存**: 合理缓存用户状态，减少不必要的 API 调用
+- **加载优化**: 实现加载状态和骨架屏，提升用户体验
+- **错误边界**: 设置错误边界组件，防止单点故障影响整体应用
 
 ## 📖 总结
 
