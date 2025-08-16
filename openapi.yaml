@@ -1274,6 +1274,62 @@ paths:
         - VibePass Management
       security:
         - bearer: []
+  /vibe-passes/{id}/upload-metadata:
+    post:
+      operationId: VibePassController_uploadMetadata
+      summary: 'Step 1: Upload metadata to 0G Storage for INFT minting'
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadMetadataDto'
+      responses:
+        '200':
+          description: Successfully uploaded metadata to 0G Storage
+        '404':
+          description: VibePass not found
+        '409':
+          description: INFT already minted
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/{id}/mint-with-metadata:
+    post:
+      operationId: VibePassController_mintWithMetadata
+      summary: 'Step 2: Mint INFT using uploaded metadata'
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MintWithMetadataDto'
+      responses:
+        '200':
+          description: Successfully minted INFT using uploaded metadata
+        '404':
+          description: VibePass not found
+        '409':
+          description: INFT already minted
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
   /vibe-passes/my:
     get:
       operationId: VibePassController_getMyVibePasses
@@ -1868,6 +1924,65 @@ components:
             description: Intelligent NFT for user
       required:
         - walletAddress
+        - nonce
+        - signature
+    UploadMetadataDto:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+          description: User wallet address
+          example: '0x1234567890123456789012345678901234567890'
+        nonce:
+          type: string
+          description: Nonce from wallet verification
+          example: abc123def456
+        signature:
+          type: string
+          description: User wallet signature for metadata upload authorization
+          example: 0x123456789abcdef...
+        tokenMetadata:
+          type: object
+          description: Additional token metadata (optional)
+          example:
+            name: 'User INFT #1'
+            description: Intelligent NFT for user
+      required:
+        - walletAddress
+        - nonce
+        - signature
+    MintWithMetadataDto:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+          description: User wallet address
+          example: '0x1234567890123456789012345678901234567890'
+        rootHash:
+          type: string
+          description: Root hash from metadata upload
+          example: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
+        sealedKey:
+          type: string
+          description: Sealed key from metadata upload (optional, will use stored value if not provided)
+          example: abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+        nonce:
+          type: string
+          description: Nonce from wallet verification
+          example: abc123def456
+        signature:
+          type: string
+          description: User wallet signature for minting authorization
+          example: 0x123456789abcdef...
+        tokenMetadata:
+          type: object
+          description: Additional token metadata (optional)
+          example:
+            name: 'User INFT #1'
+            description: Intelligent NFT for user
+      required:
+        - walletAddress
+        - rootHash
         - nonce
         - signature
     CreateProfileUpdateDto:
