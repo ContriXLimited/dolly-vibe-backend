@@ -196,6 +196,29 @@ enum VibeUserStatus {
   BLACKLIST // 黑名单
 }
 
+enum VibeProjectStatus {
+  NORMAL // 正常
+  BLACKLIST // 黑名单
+}
+
+enum VibePassStatus {
+  NORMAL // 正常
+  BLACKLIST // 黑名单
+}
+
+enum VibeUserParam {
+  ENGAGEMENT // 活跃度，根据每日发言的频率、消息数量和内容长度，衡量用户在社区中的活跃水平
+  RELEVANCE // 相关度，衡量用户发言内容与项目主题的契合度，即与项目相关的消息占比
+  EXPERTISE // 专业度，评估用户发言的专业性和深度，是否包含独到见解或对项目有价值的分析
+  INTERACTION // 互动度，衡量用户与其他成员的交流情况，包括是否及时回应、是否积极参与讨论或帮助他人
+  CIVILITY // 文明度，评估用户发言的文明程度，包括语气是否友好、是否合规、是否保持建设性态度
+}
+
+enum ScoreRecordType {
+  PROFILE_UPDATE // 因为用户画像更新导致积分变化
+  SYSTEM // 系统原因导致积分变化（比如系统调整）
+}
+
 model User {
   id         String      @id @db.VarChar(64)
   platform   Platform?   @default(DISCORD)
@@ -608,4 +631,81 @@ model WalletNonce {
   @@index([walletAddress], map: "wallet_nonce_address_index")
   @@index([expiresAt], map: "wallet_nonce_expires_index")
   @@map("wallet_nonces")
+}
+
+// Vibe Pass 相关模型
+model VibeProject {
+  id        String            @id @db.VarChar(64)
+  projectId String            @db.VarChar(64) // 对应 Dolly 系统内的 Project ID
+  score     Decimal           @default(0) @db.Decimal(10, 2) // 项目总分
+  status    VibeProjectStatus @default(NORMAL) // 项目状态
+  createdAt DateTime          @default(now()) // 项目创建时间
+  updatedAt DateTime          @updatedAt // 项目更新时间
+
+  @@index([projectId], map: "vibe_project_projectId_index")
+  @@index([status], map: "vibe_project_status_index")
+  @@index([score], map: "vibe_project_score_index")
+  @@map("vibe_projects")
+}
+
+model VibePass {
+  id            String         @id @db.VarChar(64)
+  vibeUserId    String         @db.VarChar(64) // VibeUser ID
+  vibeProjectId String         @db.VarChar(64) // VibeProject ID
+  userId        String         @db.VarChar(64) // 对应的 Dolly 系统内的 User ID
+  msgCount      Int            @default(0) // 24小时内消息数量（缓存）
+  inviteCount   Int            @default(0) // Discord 邀请人数（缓存）
+  score         Decimal        @default(0) @db.Decimal(10, 2) // INFT 总积分（AI 判断）
+  params        String         @db.Text // INFT 各项属性值（JSON 数组，用于绘制雷达图，AI 判断的维度）
+  tags          String?        @db.Text // 标签列表（JSON 数组，AI 判断）
+  sealedKey     String?        @db.VarChar(255) // INFT 元数据 SealedKey
+  rootHash      String?        @db.VarChar(255) // INFT 元数据 RootHash（保存用户画像、聊天记录）
+  tokenId       String?        @db.VarChar(255) // INFT Token ID
+  mintTxHash    String?        @db.VarChar(255) // INFT Mint 交易 Hash
+  status        VibePassStatus @default(NORMAL) // 用户状态
+  createdAt     DateTime       @default(now()) // VibePass 创建时间
+  updatedAt     DateTime       @updatedAt // 数据更新时间
+  mintedAt      DateTime? // INFT Mint 时间
+
+  @@index([vibeUserId], map: "vibe_pass_vibeUserId_index")
+  @@index([vibeProjectId], map: "vibe_pass_vibeProjectId_index")
+  @@index([userId], map: "vibe_pass_userId_index")
+  @@index([vibeProjectId, score], map: "vibe_pass_project_score_index")
+  @@index([status], map: "vibe_pass_status_index")
+  @@index([tokenId], map: "vibe_pass_tokenId_index")
+  @@map("vibe_passes")
+}
+
+model ProfileUpdateRecord {
+  id          String    @id @db.VarChar(64)
+  userId      String?   @db.VarChar(64) // User ID（即原有的 User 表）
+  vibePassId  String?   @db.VarChar(64) // VibePass ID（如果这个 User 已经开通了 VibePass）
+  messageIds  String    @db.Text // 本次分析涉及的 MessageId 列表（JSON 数组）
+  newProfile  String    @db.Text // 新分析的用户画像
+  newScore    Decimal?  @db.Decimal(10, 2) // 新分析的 INFT 总分（AI 判断）
+  newParams   String?   @db.Text // 新判断的 INFT 各项属性值（JSON 数组，用于绘制雷达图，AI 判断）
+  newTags     String?   @db.Text // 新判断的标签列表（JSON 数组，AI 判断）
+  newRootHash String?   @db.VarChar(255) // 新 INFT 元数据 RootHash（保存用户画像、聊天记录）
+  createdAt   DateTime  @default(now()) // 记录创建时间
+  uploadedAt  DateTime? // 元数据上传时间
+
+  @@index([userId], map: "profile_update_record_userId_index")
+  @@index([vibePassId], map: "profile_update_record_vibePassId_index")
+  @@index([createdAt], map: "profile_update_record_createdAt_index")
+  @@map("profile_update_records")
+}
+
+model ScoreRecord {
+  id             String          @id @db.VarChar(64)
+  vibePassId     String          @db.VarChar(64) // VibePass ID
+  value          Decimal         @db.Decimal(10, 2) // 积分变化数量（可以是正数或负数）
+  type           ScoreRecordType // 积分变化类型
+  updateRecordId String?         @db.VarChar(64) // 积分变化对应的 ProfileUpdateRecord 的 ID
+  createdAt      DateTime        @default(now()) // 记录创建时间
+
+  @@index([vibePassId], map: "score_record_vibePassId_index")
+  @@index([type], map: "score_record_type_index")
+  @@index([updateRecordId], map: "score_record_updateRecordId_index")
+  @@index([vibePassId, createdAt], map: "score_record_vibe_pass_created_index")
+  @@map("score_records")
 }

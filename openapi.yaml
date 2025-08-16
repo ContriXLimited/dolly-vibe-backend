@@ -1224,6 +1224,418 @@ paths:
                     example: /api
       tags:
         - Health Check
+  /vibe-passes/join:
+    post:
+      operationId: VibePassController_joinProject
+      summary: Join a Vibe project and create VibePass
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinProjectDto'
+      responses:
+        '201':
+          description: Successfully joined project and created VibePass
+        '400':
+          description: Bad request - Invalid project or user data
+        '409':
+          description: Conflict - User has already joined this project
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/{id}/mint:
+    post:
+      operationId: VibePassController_mintInft
+      summary: Mint INFT for VibePass
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MintInftDto'
+      responses:
+        '200':
+          description: Successfully minted INFT
+        '404':
+          description: VibePass not found
+        '409':
+          description: INFT already minted
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/my:
+    get:
+      operationId: VibePassController_getMyVibePasses
+      summary: Get current user's VibePasses
+      parameters: []
+      responses:
+        '200':
+          description: Successfully retrieved user VibePasses
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/{id}:
+    get:
+      operationId: VibePassController_getVibePassById
+      summary: Get VibePass by ID
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved VibePass
+        '404':
+          description: VibePass not found
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes:
+    get:
+      operationId: VibePassController_queryVibePasses
+      summary: Query VibePasses with pagination
+      parameters:
+        - name: vibeProjectId
+          required: false
+          in: query
+          description: VibeProject ID to filter by
+          schema:
+            example: cuid2-example-vibe-project-id
+            type: string
+        - name: page
+          required: false
+          in: query
+          description: Page number (starting from 1)
+          schema:
+            default: 1
+            example: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: Number of items per page
+          schema:
+            default: 20
+            example: 20
+            type: number
+      responses:
+        '200':
+          description: Successfully retrieved VibePasses
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/projects/default:
+    get:
+      operationId: VibePassController_getDefaultVibeProject
+      summary: Get default VibeProject information
+      parameters: []
+      responses:
+        '200':
+          description: Successfully retrieved default VibeProject
+        '404':
+          description: Default VibeProject not found
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /profile-updates:
+    post:
+      operationId: ProfileUpdateController_createProfileUpdate
+      summary: Create profile update record (AI API)
+      parameters:
+        - name: x-ai-secret
+          in: header
+          description: AI API secret key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProfileUpdateDto'
+      responses:
+        '201':
+          description: Successfully created profile update
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Invalid AI API secret
+        '404':
+          description: User or VibePass not found
+      tags:
+        - Profile Update Management
+    get:
+      operationId: ProfileUpdateController_getProfileUpdates
+      summary: Query profile update records
+      parameters:
+        - name: userId
+          required: false
+          in: query
+          description: User ID to filter by
+          schema:
+            example: cuid2-example-user-id
+            type: string
+        - name: vibePassId
+          required: false
+          in: query
+          description: VibePass ID to filter by
+          schema:
+            example: cuid2-example-vibe-pass-id
+            type: string
+        - name: page
+          required: false
+          in: query
+          description: Page number (starting from 1)
+          schema:
+            default: 1
+            example: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: Number of items per page
+          schema:
+            default: 20
+            example: 20
+            type: number
+      responses:
+        '200':
+          description: Successfully retrieved profile updates
+      tags:
+        - Profile Update Management
+  /profile-updates/{id}:
+    get:
+      operationId: ProfileUpdateController_getProfileUpdateById
+      summary: Get profile update record by ID
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ProfileUpdateRecord ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved profile update
+        '404':
+          description: Profile update record not found
+      tags:
+        - Profile Update Management
+  /score-records/{vibePassId}:
+    get:
+      operationId: ScoreRecordController_getScoreRecords
+      summary: Get score records for a VibePass
+      parameters:
+        - name: vibePassId
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+        - name: page
+          required: false
+          in: query
+          description: Page number (starting from 1)
+          schema:
+            default: 1
+            example: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: Number of items per page
+          schema:
+            default: 20
+            example: 20
+            type: number
+      responses:
+        '200':
+          description: Successfully retrieved score records
+        '404':
+          description: VibePass not found
+      tags:
+        - Score Record Management
+  /score-records/record/{id}:
+    get:
+      operationId: ScoreRecordController_getScoreRecordById
+      summary: Get score record by ID
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ScoreRecord ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved score record
+        '404':
+          description: Score record not found
+      tags:
+        - Score Record Management
+  /leaderboard/{vibeProjectId}:
+    get:
+      operationId: LeaderboardController_getProjectLeaderboard
+      summary: Get project leaderboard
+      parameters:
+        - name: vibeProjectId
+          required: true
+          in: path
+          description: VibeProject ID
+          schema:
+            type: string
+        - name: timeWindow
+          required: false
+          in: query
+          description: Time window for leaderboard
+          schema:
+            default: all
+            example: all
+            enum:
+              - daily
+              - weekly
+              - all
+            type: string
+        - name: page
+          required: false
+          in: query
+          description: Page number (starting from 1)
+          schema:
+            default: 1
+            example: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: Number of items per page
+          schema:
+            default: 50
+            example: 50
+            type: number
+      responses:
+        '200':
+          description: Successfully retrieved project leaderboard
+        '404':
+          description: VibeProject not found
+      tags:
+        - Leaderboard
+      security:
+        - bearer: []
+  /leaderboard/global/all:
+    get:
+      operationId: LeaderboardController_getGlobalLeaderboard
+      summary: Get global leaderboard
+      parameters:
+        - name: timeWindow
+          required: false
+          in: query
+          description: Time window for leaderboard
+          schema:
+            default: all
+            example: all
+            enum:
+              - daily
+              - weekly
+              - all
+            type: string
+        - name: page
+          required: false
+          in: query
+          description: Page number (starting from 1)
+          schema:
+            default: 1
+            example: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: Number of items per page
+          schema:
+            default: 50
+            example: 50
+            type: number
+      responses:
+        '200':
+          description: Successfully retrieved global leaderboard
+      tags:
+        - Leaderboard
+      security:
+        - bearer: []
+  /leaderboard/{vibeProjectId}/rank/{vibePassId}:
+    get:
+      operationId: LeaderboardController_getUserRank
+      summary: Get user rank in project leaderboard
+      parameters:
+        - name: vibeProjectId
+          required: true
+          in: path
+          description: VibeProject ID
+          schema:
+            type: string
+        - name: vibePassId
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+        - name: timeWindow
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved user rank
+        '404':
+          description: VibeProject or VibePass not found
+      tags:
+        - Leaderboard
+      security:
+        - bearer: []
+  /leaderboard/global/rank/{vibePassId}:
+    get:
+      operationId: LeaderboardController_getGlobalUserRank
+      summary: Get user rank in global leaderboard
+      parameters:
+        - name: vibePassId
+          required: true
+          in: path
+          description: VibePass ID
+          schema:
+            type: string
+        - name: timeWindow
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved user global rank
+        '404':
+          description: VibePass not found
+      tags:
+        - Leaderboard
+      security:
+        - bearer: []
 info:
   title: Dolly Vibe API
   description: The Dolly Vibe API documentation with VibeUser management, authentication, and more
@@ -1426,3 +1838,90 @@ components:
         - userId
         - verified
         - connectedAt
+    JoinProjectDto:
+      type: object
+      properties:
+        vibeProjectId:
+          type: string
+          description: VibeProject ID (optional, defaults to default project)
+          example: cuid2-example-vibe-project-id
+    MintInftDto:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+          description: User wallet address
+          example: '0x1234567890123456789012345678901234567890'
+        nonce:
+          type: string
+          description: Nonce from wallet verification
+          example: abc123def456
+        signature:
+          type: string
+          description: User wallet signature for minting authorization
+          example: 0x123456789abcdef...
+        tokenMetadata:
+          type: object
+          description: Additional token metadata (optional)
+          example:
+            name: 'User INFT #1'
+            description: Intelligent NFT for user
+      required:
+        - walletAddress
+        - nonce
+        - signature
+    CreateProfileUpdateDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User ID (for regular User profile update)
+          example: cuid2-example-user-id
+        vibePassId:
+          type: string
+          description: VibePass ID (for VibePass profile update)
+          example: cuid2-example-vibe-pass-id
+        messageIds:
+          description: Message IDs involved in this analysis
+          example:
+            - msg1
+            - msg2
+            - msg3
+          type: array
+          items:
+            type: string
+        newProfile:
+          type: string
+          description: New analyzed user profile
+          example: This user is highly engaged in blockchain discussions...
+        newScore:
+          type: number
+          description: New analyzed INFT total score
+          example: 85.5
+        newParams:
+          description: New INFT parameter values for radar chart (5 dimensions)
+          example:
+            - 75
+            - 80
+            - 90
+            - 70
+            - 85
+          type: array
+          items:
+            type: number
+        newTags:
+          description: New analyzed tags
+          example:
+            - blockchain
+            - defi
+            - active-member
+          type: array
+          items:
+            type: string
+        newRootHash:
+          type: string
+          description: New INFT metadata root hash
+          example: QmXYZ123...
+      required:
+        - messageIds
+        - newProfile

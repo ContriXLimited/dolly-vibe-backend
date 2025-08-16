@@ -261,6 +261,49 @@ export class WalletVerificationService {
   }
 
   /**
+   * 仅验证钱包签名（不创建用户或JWT）
+   */
+  async verifySignatureOnly(walletAddress: string, nonce: string, signature: string): Promise<void> {
+    // 验证钱包地址格式
+    if (!ethers.isAddress(walletAddress)) {
+      throw new BadRequestException('Invalid wallet address');
+    }
+
+    // 查找nonce记录
+    const nonceRecord = await this.prisma.walletNonce.findFirst({
+      where: {
+        walletAddress: walletAddress.toLowerCase(),
+        nonce,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!nonceRecord) {
+      throw new BadRequestException('Invalid or expired nonce');
+    }
+
+    try {
+      // 验证签名
+      const recoveredAddress = ethers.verifyMessage(nonceRecord.message, signature);
+      
+      if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+        throw new BadRequestException('Signature verification failed');
+      }
+
+      // 删除已使用的nonce（防止重复使用）
+      await this.prisma.walletNonce.delete({
+        where: { id: nonceRecord.id },
+      });
+
+      this.logger.log(`Wallet signature verified for ${walletAddress} (signature only)`);
+
+    } catch (error) {
+      this.logger.error(`Signature verification failed for ${walletAddress}:`, error.message);
+      throw new BadRequestException(`Signature verification failed: ${error.message}`);
+    }
+  }
+
+  /**
    * 清理过期的nonce记录
    */
   private async cleanupExpiredNonces() {

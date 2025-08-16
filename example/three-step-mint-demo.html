@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolly Vibe - Three-Step INFT Minting Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(86, 171, 47, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(240, 147, 251, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .step-container {
+            border: 2px solid #e1e5e9;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .step-container.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .step-container.completed {
+            border-color: #56ab2f;
+            background: #f0f8f0;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e1e5e9;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .step-container.active .step-number {
+            background: #667eea;
+            color: white;
+        }
+
+        .step-container.completed .step-number {
+            background: #56ab2f;
+            color: white;
+        }
+
+        .step-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .step-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .data-display {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+            border-left: 4px solid #667eea;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .data-value {
+            color: #666;
+            word-break: break-all;
+        }
+
+        .vibe-pass-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e1e5e9;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Dolly Vibe</div>
+            <div class="subtitle">Three-Step INFT Minting</div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- API Configuration Section -->
+        <div id="configSection">
+            <div class="form-group">
+                <label for="apiEndpoint">API Endpoint:</label>
+                <input type="text" id="apiEndpoint" value="http://localhost:3000" placeholder="Enter API endpoint..." />
+            </div>
+            <div class="form-group">
+                <label for="authToken">Authorization Token:</label>
+                <input type="text" id="authToken" placeholder="Enter your JWT token here..." />
+            </div>
+            <button class="btn btn-primary" onclick="checkVibePass()">Check VibePass Status</button>
+        </div>
+
+        <!-- No VibePass Section -->
+        <div id="noVibePassSection" class="hidden">
+            <div class="step-container">
+                <div class="step-header">
+                    <div class="step-number">!</div>
+                    <div class="step-title">Welcome to Dolly Vibe! 🎉</div>
+                </div>
+                <div class="step-description">
+                    You don't have a VibePass yet. Click the button below to join the vibrant community and start your journey!
+                </div>
+                <button class="btn btn-success" onclick="joinProject()">Let's Vibe! 🚀</button>
+            </div>
+        </div>
+
+        <!-- VibePass Found Section -->
+        <div id="vibePassSection" class="hidden">
+            <div class="step-container">
+                <div class="step-header">
+                    <div class="step-number">✓</div>
+                    <div class="step-title">Your VibePass 🎫</div>
+                </div>
+                <div class="vibe-pass-info">
+                    <div class="info-item">
+                        <div class="info-label">Project ID</div>
+                        <div class="info-value" id="projectId">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Score</div>
+                        <div class="info-value" id="userScore">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value" id="passStatus">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Token ID</div>
+                        <div class="info-value" id="tokenId">-</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="startMintingProcess()" id="startMintingBtn">Start Three-Step Minting Process ➡️</button>
+            </div>
+        </div>
+
+        <!-- Already Minted Section -->
+        <div id="alreadyMintedSection" class="hidden">
+            <div class="step-container completed">
+                <div class="step-header">
+                    <div class="step-number">🎉</div>
+                    <div class="step-title">INFT Already Minted!</div>
+                </div>
+                <div class="step-description">
+                    Congratulations! Your Intelligent NFT has been successfully minted. Your unique token represents your profile and participation in the Dolly Vibe community.
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Animation -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Processing...</div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorMessage" class="error hidden"></div>
+
+        <!-- Success Display -->
+        <div id="successMessage" class="success hidden"></div>
+
+        <!-- Step 1: Connect Wallet -->
+        <div class="step-container" id="step1">
+            <div class="step-header">
+                <div class="step-number">1</div>
+                <div class="step-title">Connect Wallet & Sign Message</div>
+            </div>
+            <div class="step-description">
+                Connect your MetaMask wallet and sign a message to authorize the minting process.
+            </div>
+            <div class="form-group">
+                <label for="walletAddress">Wallet Address:</label>
+                <input type="text" id="walletAddress" placeholder="Connect wallet to auto-fill..." readonly />
+            </div>
+            <div class="form-group" id="signMessageSection" style="display: none;">
+                <label for="signMessage">Sign Message:</label>
+                <textarea id="signMessage" placeholder="Message will be generated automatically..." readonly></textarea>
+            </div>
+            <div class="form-group" id="signatureSection" style="display: none;">
+                <label for="signature">Wallet Signature:</label>
+                <input type="text" id="signature" placeholder="Signature will be generated automatically..." readonly />
+            </div>
+            <button class="btn btn-secondary" onclick="connectWallet()" id="connectWalletBtn">Connect Wallet 🔗</button>
+            <button class="btn btn-primary" onclick="proceedToStep2()" id="step1NextBtn" style="display: none;">Proceed to Upload Metadata ➡️</button>
+        </div>
+
+        <!-- Step 2: Upload Metadata -->
+        <div class="step-container" id="step2">
+            <div class="step-header">
+                <div class="step-number">2</div>
+                <div class="step-title">Upload Metadata to 0G Storage</div>
+            </div>
+            <div class="step-description">
+                Upload your profile data and message history to 0G decentralized storage to get the rootHash and sealedKey.
+            </div>
+            <div class="data-display" id="metadataResult" style="display: none;">
+                <div class="data-label">Root Hash:</div>
+                <div class="data-value" id="rootHashDisplay"></div>
+                <div class="data-label" style="margin-top: 10px;">Sealed Key:</div>
+                <div class="data-value" id="sealedKeyDisplay"></div>
+            </div>
+            <button class="btn btn-warning" onclick="uploadMetadata()" id="uploadMetadataBtn" disabled>Upload Metadata to 0G Storage 📤</button>
+            <button class="btn btn-primary" onclick="proceedToStep3()" id="step2NextBtn" style="display: none;">Proceed to Mint INFT ➡️</button>
+        </div>
+
+        <!-- Step 3: Mint INFT -->
+        <div class="step-container" id="step3">
+            <div class="step-header">
+                <div class="step-number">3</div>
+                <div class="step-title">Mint Your Intelligent NFT</div>
+            </div>
+            <div class="step-description">
+                Use the uploaded metadata to mint your unique Intelligent NFT on the blockchain.
+            </div>
+            <div class="data-display" id="mintResult" style="display: none;">
+                <div class="data-label">Token ID:</div>
+                <div class="data-value" id="tokenIdDisplay"></div>
+                <div class="data-label" style="margin-top: 10px;">Transaction Hash:</div>
+                <div class="data-value" id="txHashDisplay"></div>
+                <div class="data-label" style="margin-top: 10px;">Minted At:</div>
+                <div class="data-value" id="mintedAtDisplay"></div>
+            </div>
+            <button class="btn btn-success" onclick="mintINFT()" id="mintINFTBtn" disabled>Mint INFT ✨</button>
+            <div class="success" id="finalSuccess" style="display: none;">
+                🎉 Congratulations! Your Intelligent NFT has been successfully minted! You now own a unique digital asset representing your profile and participation in the Dolly Vibe community.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentToken = '';
+        let currentVibePass = null;
+        let currentWalletAddress = '';
+        let currentNonce = '';
+        let currentSignature = '';
+        let uploadedRootHash = '';
+        let uploadedSealedKey = '';
+
+        // Current step tracking
+        let currentStep = 1;
+
+        function getApiBaseUrl() {
+            return document.getElementById('apiEndpoint').value.trim() || 'http://localhost:3000';
+        }
+
+        // Utility Functions
+        function showElement(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            showElement('errorMessage');
+            setTimeout(() => hideElement('errorMessage'), 8000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            showElement('successMessage');
+            setTimeout(() => hideElement('successMessage'), 5000);
+        }
+
+        function updateProgress() {
+            const progressFill = document.getElementById('progressFill');
+            const percentage = (currentStep / 3) * 100;
+            progressFill.style.width = percentage + '%';
+        }
+
+        function setStepActive(stepNumber) {
+            // Reset all steps
+            for (let i = 1; i <= 3; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                stepElement.classList.remove('active', 'completed');
+                
+                if (i < stepNumber) {
+                    stepElement.classList.add('completed');
+                } else if (i === stepNumber) {
+                    stepElement.classList.add('active');
+                }
+            }
+            currentStep = stepNumber;
+            updateProgress();
+        }
+
+        // API Functions
+        async function makeAPICall(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                mode: 'cors',
+                credentials: 'omit',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(`${getApiBaseUrl()}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result.data || result;
+            } catch (error) {
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    throw new Error('CORS Error: Please ensure the API server allows cross-origin requests from this domain.');
+                }
+                throw error;
+            }
+        }
+
+        // Check if MetaMask is available
+        function isMetaMaskAvailable() {
+            return typeof window.ethereum !== 'undefined';
+        }
+
+        // Check VibePass status
+        async function checkVibePass() {
+            const tokenInput = document.getElementById('authToken');
+            currentToken = tokenInput.value.trim();
+
+            if (!currentToken) {
+                showError('Please enter your authorization token');
+                return;
+            }
+
+            resetDisplay();
+            showLoading();
+
+            try {
+                // Get user's VibePass
+                const vibePassResponse = await makeAPICall('/vibe-passes/my');
+                hideLoading();
+
+                if (vibePassResponse.data && vibePassResponse.data.length > 0) {
+                    // User has VibePass
+                    currentVibePass = vibePassResponse.data[0];
+                    displayVibePass(currentVibePass);
+                    
+                    if (currentVibePass.tokenId) {
+                        // Already minted
+                        showElement('alreadyMintedSection');
+                    } else {
+                        // Need to mint
+                        showElement('vibePassSection');
+                    }
+                } else {
+                    // No VibePass found
+                    showElement('noVibePassSection');
+                }
+
+            } catch (error) {
+                hideLoading();
+                showError(`Failed to check VibePass: ${error.message}`);
+            }
+        }
+
+        // Join project
+        async function joinProject() {
+            resetDisplay();
+            showLoading();
+
+            try {
+                const response = await makeAPICall('/vibe-passes/join', 'POST', {});
+                hideLoading();
+                
+                currentVibePass = response.data;
+                showSuccess('Successfully joined the project! 🎉');
+                displayVibePass(currentVibePass);
+                showElement('vibePassSection');
+
+            } catch (error) {
+                hideLoading();
+                showError(`Failed to join project: ${error.message}`);
+            }
+        }
+
+        // Display VibePass information
+        function displayVibePass(vibePass) {
+            document.getElementById('projectId').textContent = vibePass.vibeProjectId?.substring(0, 8) + '...' || 'N/A';
+            document.getElementById('userScore').textContent = vibePass.score || '0';
+            document.getElementById('passStatus').textContent = vibePass.status || 'NORMAL';
+            document.getElementById('tokenId').textContent = vibePass.tokenId ? 
+                (vibePass.tokenId.substring(0, 12) + '...') : 'Not Minted';
+        }
+
+        // Start the minting process
+        function startMintingProcess() {
+            if (!currentVibePass) {
+                showError('No VibePass found');
+                return;
+            }
+
+            // Hide previous sections and show steps
+            hideElement('vibePassSection');
+            resetDisplay();
+            setStepActive(1);
+            showSuccess('Three-step minting process started! Let\'s begin with Step 1.');
+        }
+
+        // Reset display helper
+        function resetDisplay() {
+            hideElement('noVibePassSection');
+            hideElement('vibePassSection');
+            hideElement('alreadyMintedSection');
+            // hideError();
+            // hideSuccess();
+        }
+
+        // Step 1: Connect Wallet
+        async function connectWallet() {
+            if (!isMetaMaskAvailable()) {
+                showError('MetaMask is not installed. Please install MetaMask to continue.');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // Request account access
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts.length === 0) {
+                    throw new Error('No accounts found');
+                }
+
+                currentWalletAddress = accounts[0];
+                document.getElementById('walletAddress').value = currentWalletAddress;
+
+                // Get signing message from backend
+                const result = await makeAPICall(`/auth/wallet/nonce?walletAddress=${encodeURIComponent(currentWalletAddress)}`);
+                currentNonce = result.nonce;
+                document.getElementById('signMessage').value = result.message;
+
+                // Show the message sections
+                document.getElementById('signMessageSection').style.display = 'block';
+                document.getElementById('signatureSection').style.display = 'block';
+
+                // Automatically request signature from MetaMask
+                try {
+                    currentSignature = await window.ethereum.request({
+                        method: 'personal_sign',
+                        params: [result.message, currentWalletAddress],
+                    });
+
+                    document.getElementById('signature').value = currentSignature;
+                    
+                    // Hide connect button and show next button
+                    document.getElementById('connectWalletBtn').style.display = 'none';
+                    document.getElementById('step1NextBtn').style.display = 'block';
+
+                    hideLoading();
+                    showSuccess('Wallet connected and message signed successfully! 🎉');
+
+                } catch (signError) {
+                    hideLoading();
+                    showError(`Failed to sign message: ${signError.message}`);
+                }
+
+            } catch (error) {
+                hideLoading();
+                if (error.code === 4001) {
+                    showError('Please connect your wallet to continue.');
+                } else {
+                    showError(`Failed to connect wallet: ${error.message}`);
+                }
+            }
+        }
+
+        function proceedToStep2() {
+            setStepActive(2);
+            document.getElementById('uploadMetadataBtn').disabled = false;
+            showSuccess('Step 1 completed! Now let\'s upload your metadata to 0G Storage.');
+        }
+
+        // Step 2: Upload Metadata
+        async function uploadMetadata() {
+            showLoading();
+
+            try {
+                const response = await makeAPICall(`/vibe-passes/${currentVibePass.id}/upload-metadata`, 'POST', {
+                    walletAddress: currentWalletAddress,
+                    nonce: currentNonce,
+                    signature: currentSignature,
+                    tokenMetadata: {
+                        name: `Dolly Vibe INFT #${Date.now()}`,
+                        description: 'Intelligent NFT representing user profile in Dolly Vibe',
+                        attributes: []
+                    }
+                });
+
+                uploadedRootHash = response.data.rootHash;
+                uploadedSealedKey = response.data.sealedKey;
+
+                // Display the results
+                document.getElementById('rootHashDisplay').textContent = uploadedRootHash;
+                document.getElementById('sealedKeyDisplay').textContent = uploadedSealedKey;
+                document.getElementById('metadataResult').style.display = 'block';
+
+                // Hide upload button and show next button
+                document.getElementById('uploadMetadataBtn').style.display = 'none';
+                document.getElementById('step2NextBtn').style.display = 'block';
+
+                hideLoading();
+                showSuccess('Metadata uploaded successfully to 0G Storage! 📤');
+
+            } catch (error) {
+                hideLoading();
+                showError(`Failed to upload metadata: ${error.message}`);
+            }
+        }
+
+        function proceedToStep3() {
+            setStepActive(3);
+            document.getElementById('mintINFTBtn').disabled = false;
+            showSuccess('Step 2 completed! Now let\'s mint your INFT using the uploaded metadata.');
+        }
+
+        // Step 3: Mint INFT
+        async function mintINFT() {
+            showLoading();
+
+            try {
+                const response = await makeAPICall(`/vibe-passes/${currentVibePass.id}/mint-with-metadata`, 'POST', {
+                    walletAddress: currentWalletAddress,
+                    rootHash: uploadedRootHash,
+                    sealedKey: uploadedSealedKey, // Optional since it's stored in DB
+                    nonce: currentNonce,
+                    signature: currentSignature,
+                    tokenMetadata: {
+                        name: `Dolly Vibe INFT #${Date.now()}`,
+                        description: 'Intelligent NFT representing user profile in Dolly Vibe',
+                        attributes: []
+                    }
+                });
+
+                // Display the results
+                document.getElementById('tokenIdDisplay').textContent = response.data.tokenId || 'N/A';
+                document.getElementById('txHashDisplay').textContent = response.data.mintTxHash || 'N/A';
+                document.getElementById('mintedAtDisplay').textContent = response.data.mintedAt || 'N/A';
+                document.getElementById('mintResult').style.display = 'block';
+
+                // Hide mint button and show success
+                document.getElementById('mintINFTBtn').style.display = 'none';
+                document.getElementById('finalSuccess').style.display = 'block';
+
+                // Mark step 3 as completed
+                setStepActive(4); // This will mark step 3 as completed
+
+                hideLoading();
+                showSuccess('🎉 INFT minted successfully! Your intelligent NFT is now on the blockchain!');
+
+            } catch (error) {
+                hideLoading();
+                showError(`Failed to mint INFT: ${error.message}`);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('authToken').focus();
+            
+            // Allow Enter key to submit in config section
+            ['authToken', 'apiEndpoint'].forEach(id => {
+                document.getElementById(id).addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkVibePass();
+                    }
+                });
+            });
+            
+            updateProgress();
+        });
+    </script>
+</body>
+</html>

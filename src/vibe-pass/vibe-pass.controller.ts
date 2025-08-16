@@ -1,0 +1,150 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+import { VibePassService } from './vibe-pass.service';
+import { JoinProjectDto } from './dto/join-project.dto';
+import { MintInftDto } from './dto/mint-inft.dto';
+import { UploadMetadataDto } from './dto/upload-metadata.dto';
+import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
+import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { VibeUser } from '@prisma/client';
+
+@ApiTags('VibePass Management')
+@Controller('vibe-passes')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class VibePassController {
+  constructor(private readonly vibePassService: VibePassService) {}
+
+  @Post('join')
+  @ApiOperation({ summary: 'Join a Vibe project and create VibePass' })
+  @ApiResponse({ status: 201, description: 'Successfully joined project and created VibePass' })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid project or user data' })
+  @ApiResponse({ status: 409, description: 'Conflict - User has already joined this project' })
+  async joinProject(
+    @CurrentUser() currentUser: VibeUser,
+    @Body() dto: JoinProjectDto,
+  ) {
+    const vibePass = await this.vibePassService.joinProject(currentUser, dto);
+    return {
+      message: 'Successfully joined project',
+      data: vibePass,
+    };
+  }
+
+  @Post(':id/mint')
+  @ApiOperation({ summary: 'Mint INFT for VibePass' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully minted INFT' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  @ApiResponse({ status: 409, description: 'INFT already minted' })
+  async mintInft(
+    @Param('id') id: string,
+    @Body() dto: MintInftDto,
+  ) {
+    const vibePass = await this.vibePassService.mintInft(id, dto);
+    return {
+      message: 'Successfully minted INFT',
+      data: vibePass,
+    };
+  }
+
+  @Post(':id/upload-metadata')
+  @ApiOperation({ summary: 'Step 1: Upload metadata to 0G Storage for INFT minting' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully uploaded metadata to 0G Storage' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  @ApiResponse({ status: 409, description: 'INFT already minted' })
+  async uploadMetadata(
+    @Param('id') id: string,
+    @Body() dto: UploadMetadataDto,
+  ) {
+    const result = await this.vibePassService.uploadMetadata(id, dto);
+    return {
+      message: result.message,
+      data: {
+        rootHash: result.rootHash,
+        sealedKey: result.sealedKey,
+      },
+    };
+  }
+
+  @Post(':id/mint-with-metadata')
+  @ApiOperation({ summary: 'Step 2: Mint INFT using uploaded metadata' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully minted INFT using uploaded metadata' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  @ApiResponse({ status: 409, description: 'INFT already minted' })
+  async mintWithMetadata(
+    @Param('id') id: string,
+    @Body() dto: MintWithMetadataDto,
+  ) {
+    const vibePass = await this.vibePassService.mintWithMetadata(id, dto);
+    return {
+      message: 'Successfully minted INFT using uploaded metadata',
+      data: vibePass,
+    };
+  }
+
+  @Get('my')
+  @ApiOperation({ summary: 'Get current user\'s VibePasses' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved user VibePasses' })
+  async getMyVibePasses(@CurrentUser() currentUser: VibeUser) {
+    const vibePasses = await this.vibePassService.findByUser(currentUser.id);
+    return {
+      message: 'Successfully retrieved VibePasses',
+      data: vibePasses,
+    };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get VibePass by ID' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved VibePass' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  async getVibePassById(@Param('id') id: string) {
+    const vibePass = await this.vibePassService.findById(id);
+    return {
+      message: 'Successfully retrieved VibePass',
+      data: vibePass,
+    };
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Query VibePasses with pagination' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved VibePasses' })
+  async queryVibePasses(@Query() dto: QueryVibePassDto) {
+    const result = await this.vibePassService.findMany(dto);
+    return {
+      message: 'Successfully retrieved VibePasses',
+      ...result,
+    };
+  }
+
+  @Get('projects/default')
+  @ApiOperation({ summary: 'Get default VibeProject information' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved default VibeProject' })
+  @ApiResponse({ status: 404, description: 'Default VibeProject not found' })
+  async getDefaultVibeProject() {
+    const vibeProject = await this.vibePassService.getDefaultVibeProject();
+    return {
+      message: 'Successfully retrieved default VibeProject',
+      data: vibeProject,
+    };
+  }
+}

@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolly Vibe - Profile Update Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"], 
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, 
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .param-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e1e5e9;
+        }
+
+        .param-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tag .remove:hover {
+            color: #d32f2f;
+        }
+
+        .message-ids-container {
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .message-id-item {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .message-id-item .remove {
+            margin-left: auto;
+            cursor: pointer;
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b6b;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .target-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .radio-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .result-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .result-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .result-content {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Dolly Vibe</div>
+            <div class="subtitle">AI Profile Update Tool</div>
+        </div>
+
+        <!-- API Configuration Section -->
+        <div class="section">
+            <div class="section-title">🌐 API Configuration</div>
+            <div class="form-group">
+                <label for="apiEndpoint">API Endpoint:</label>
+                <input type="text" id="apiEndpoint" value="http://localhost:3000" placeholder="Enter API endpoint..." />
+            </div>
+        </div>
+
+        <!-- AI Secret Token Section -->
+        <div class="section">
+            <div class="section-title">🔐 Authentication</div>
+            <div class="form-group">
+                <label for="aiSecret">AI Secret Token:</label>
+                <input type="text" id="aiSecret" placeholder="Enter your AI secret token..." />
+            </div>
+        </div>
+
+        <!-- Target Selection Section -->
+        <div class="section">
+            <div class="section-title">🎯 Update Target</div>
+            <div class="radio-group">
+                <input type="radio" id="targetUser" name="target" value="user" checked>
+                <label for="targetUser">Update User Profile</label>
+                <input type="radio" id="targetVibePass" name="target" value="vibepass">
+                <label for="targetVibePass">Update VibePass</label>
+            </div>
+            <div class="target-selection">
+                <div class="form-group">
+                    <label for="userId">User ID:</label>
+                    <input type="text" id="userId" placeholder="Enter user ID..." />
+                </div>
+                <div class="form-group">
+                    <label for="vibePassId">VibePass ID:</label>
+                    <input type="text" id="vibePassId" placeholder="Enter VibePass ID..." disabled />
+                </div>
+            </div>
+        </div>
+
+        <!-- Message IDs Section -->
+        <div class="section">
+            <div class="section-title">💬 Message IDs</div>
+            <div class="form-group">
+                <label for="newMessageId">Add Message ID:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newMessageId" placeholder="Enter message ID..." style="flex: 1;" />
+                    <button class="btn btn-secondary" onclick="addMessageId()">Add</button>
+                </div>
+            </div>
+            <div class="message-ids-container" id="messageIdsContainer">
+                <div style="color: #666; text-align: center; padding: 20px;">No message IDs added yet</div>
+            </div>
+        </div>
+
+        <!-- Profile Content Section -->
+        <div class="section">
+            <div class="section-title">📝 Profile Content</div>
+            <div class="form-group">
+                <label for="newProfile">New Profile Description:</label>
+                <textarea id="newProfile" placeholder="Enter the updated profile description..."></textarea>
+            </div>
+        </div>
+
+        <!-- Score and Parameters Section -->
+        <div class="section">
+            <div class="section-title">📊 Score & Parameters (For VibePass Only)</div>
+            <div class="form-group">
+                <label for="newScore">New Score:</label>
+                <input type="number" id="newScore" step="0.01" placeholder="Enter new score (optional)..." />
+            </div>
+            <div class="form-group">
+                <label>Five-Dimensional Parameters:</label>
+                <div class="params-grid">
+                    <div class="param-item">
+                        <div class="param-label">Engagement</div>
+                        <input type="number" id="param0" step="0.01" placeholder="0.00" />
+                    </div>
+                    <div class="param-item">
+                        <div class="param-label">Relevance</div>
+                        <input type="number" id="param1" step="0.01" placeholder="0.00" />
+                    </div>
+                    <div class="param-item">
+                        <div class="param-label">Expertise</div>
+                        <input type="number" id="param2" step="0.01" placeholder="0.00" />
+                    </div>
+                    <div class="param-item">
+                        <div class="param-label">Interaction</div>
+                        <input type="number" id="param3" step="0.01" placeholder="0.00" />
+                    </div>
+                    <div class="param-item">
+                        <div class="param-label">Civility</div>
+                        <input type="number" id="param4" step="0.01" placeholder="0.00" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tags Section -->
+        <div class="section">
+            <div class="section-title">🏷️ Tags</div>
+            <div class="form-group">
+                <label for="newTag">Add Tags:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newTag" placeholder="Enter tag..." style="flex: 1;" />
+                    <button class="btn btn-secondary" onclick="addTag()">Add Tag</button>
+                </div>
+            </div>
+            <div class="tags-container" id="tagsContainer"></div>
+        </div>
+
+        <!-- Root Hash Section -->
+        <div class="section">
+            <div class="section-title">🔗 IPFS Root Hash</div>
+            <div class="form-group">
+                <label for="newRootHash">New Root Hash (Optional):</label>
+                <input type="text" id="newRootHash" placeholder="Enter IPFS root hash..." />
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn btn-primary" onclick="updateProfile()">🚀 Update Profile</button>
+            <button class="btn btn-secondary" onclick="clearForm()">🗑️ Clear Form</button>
+        </div>
+
+        <!-- Loading Animation -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Processing update...</div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorMessage" class="error hidden"></div>
+
+        <!-- Success Display -->
+        <div id="successMessage" class="success hidden"></div>
+
+        <!-- Result Display -->
+        <div id="resultSection" class="result-section hidden">
+            <div class="result-title">✅ Update Result</div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        let messageIds = [];
+        let tags = [];
+
+        function getApiBaseUrl() {
+            return document.getElementById('apiEndpoint').value.trim() || 'http://localhost:3000';
+        }
+
+        // LocalStorage Cache Functions
+        function saveToCache() {
+            const cacheData = {
+                apiEndpoint: document.getElementById('apiEndpoint').value,
+                aiSecret: document.getElementById('aiSecret').value,
+                targetType: document.querySelector('input[name="target"]:checked').value,
+                userId: document.getElementById('userId').value,
+                vibePassId: document.getElementById('vibePassId').value,
+                newProfile: document.getElementById('newProfile').value,
+                newScore: document.getElementById('newScore').value,
+                newRootHash: document.getElementById('newRootHash').value,
+                messageIds: messageIds,
+                tags: tags,
+                params: [
+                    document.getElementById('param0').value,
+                    document.getElementById('param1').value,
+                    document.getElementById('param2').value,
+                    document.getElementById('param3').value,
+                    document.getElementById('param4').value
+                ]
+            };
+            localStorage.setItem('profileUpdateDemoCache', JSON.stringify(cacheData));
+        }
+
+        function loadFromCache() {
+            try {
+                const cacheData = localStorage.getItem('profileUpdateDemoCache');
+                if (cacheData) {
+                    const data = JSON.parse(cacheData);
+                    
+                    // Load basic fields
+                    if (data.apiEndpoint) document.getElementById('apiEndpoint').value = data.apiEndpoint;
+                    if (data.aiSecret) document.getElementById('aiSecret').value = data.aiSecret;
+                    if (data.userId) document.getElementById('userId').value = data.userId;
+                    if (data.vibePassId) document.getElementById('vibePassId').value = data.vibePassId;
+                    if (data.newProfile) document.getElementById('newProfile').value = data.newProfile;
+                    if (data.newScore) document.getElementById('newScore').value = data.newScore;
+                    if (data.newRootHash) document.getElementById('newRootHash').value = data.newRootHash;
+                    
+                    // Load target type
+                    if (data.targetType) {
+                        document.querySelector(`input[name="target"][value="${data.targetType}"]`).checked = true;
+                        // Trigger the change event to update UI
+                        document.querySelector(`input[name="target"][value="${data.targetType}"]`).dispatchEvent(new Event('change'));
+                    }
+                    
+                    // Load parameters
+                    if (data.params && Array.isArray(data.params)) {
+                        data.params.forEach((param, index) => {
+                            if (param) document.getElementById(`param${index}`).value = param;
+                        });
+                    }
+                    
+                    // Load arrays
+                    if (data.messageIds && Array.isArray(data.messageIds)) {
+                        messageIds = data.messageIds;
+                        renderMessageIds();
+                    }
+                    if (data.tags && Array.isArray(data.tags)) {
+                        tags = data.tags;
+                        renderTags();
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load cache:', error);
+            }
+        }
+
+        function clearCache() {
+            localStorage.removeItem('profileUpdateDemoCache');
+        }
+
+        // Target selection handlers
+        document.querySelectorAll('input[name="target"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const userIdInput = document.getElementById('userId');
+                const vibePassIdInput = document.getElementById('vibePassId');
+                
+                if (this.value === 'user') {
+                    userIdInput.disabled = false;
+                    vibePassIdInput.disabled = true;
+                    vibePassIdInput.value = '';
+                } else {
+                    userIdInput.disabled = true;
+                    userIdInput.value = '';
+                    vibePassIdInput.disabled = false;
+                }
+            });
+        });
+
+        // Utility Functions
+        function showElement(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            showElement('errorMessage');
+        }
+
+        function hideError() {
+            hideElement('errorMessage');
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            showElement('successMessage');
+        }
+
+        function hideSuccess() {
+            hideElement('successMessage');
+        }
+
+        function showResult(data) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.textContent = JSON.stringify(data, null, 2);
+            showElement('resultSection');
+        }
+
+        function resetMessages() {
+            hideError();
+            hideSuccess();
+            hideElement('resultSection');
+        }
+
+        // Message IDs Management
+        function addMessageId() {
+            const input = document.getElementById('newMessageId');
+            const messageId = input.value.trim();
+            
+            if (!messageId) {
+                showError('Please enter a message ID');
+                return;
+            }
+
+            if (messageIds.includes(messageId)) {
+                showError('Message ID already added');
+                return;
+            }
+
+            messageIds.push(messageId);
+            input.value = '';
+            renderMessageIds();
+            hideError();
+        }
+
+        function removeMessageId(messageId) {
+            messageIds = messageIds.filter(id => id !== messageId);
+            renderMessageIds();
+        }
+
+        function renderMessageIds() {
+            const container = document.getElementById('messageIdsContainer');
+            
+            if (messageIds.length === 0) {
+                container.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No message IDs added yet</div>';
+                return;
+            }
+
+            container.innerHTML = messageIds.map(id => `
+                <div class="message-id-item">
+                    <span>${id}</span>
+                    <span class="remove" onclick="removeMessageId('${id}')">✕</span>
+                </div>
+            `).join('');
+        }
+
+        // Tags Management
+        function addTag() {
+            const input = document.getElementById('newTag');
+            const tag = input.value.trim();
+            
+            if (!tag) {
+                showError('Please enter a tag');
+                return;
+            }
+
+            if (tags.includes(tag)) {
+                showError('Tag already added');
+                return;
+            }
+
+            tags.push(tag);
+            input.value = '';
+            renderTags();
+            hideError();
+        }
+
+        function removeTag(tag) {
+            tags = tags.filter(t => t !== tag);
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tagsContainer');
+            
+            if (tags.length === 0) {
+                container.innerHTML = '<div style="color: #666; text-align: center; padding: 10px;">No tags added yet</div>';
+                return;
+            }
+
+            container.innerHTML = tags.map(tag => `
+                <div class="tag">
+                    <span>${tag}</span>
+                    <span class="remove" onclick="removeTag('${tag}')">✕</span>
+                </div>
+            `).join('');
+        }
+
+        // Form Management
+        function clearForm() {
+            // Clear basic inputs
+            document.getElementById('userId').value = '';
+            document.getElementById('vibePassId').value = '';
+            document.getElementById('newProfile').value = '';
+            document.getElementById('newScore').value = '';
+            document.getElementById('newRootHash').value = '';
+            document.getElementById('newMessageId').value = '';
+            document.getElementById('newTag').value = '';
+
+            // Clear parameters
+            for (let i = 0; i < 5; i++) {
+                document.getElementById(`param${i}`).value = '';
+            }
+
+            // Clear arrays
+            messageIds = [];
+            tags = [];
+            renderMessageIds();
+            renderTags();
+
+            // Reset target selection
+            document.getElementById('targetUser').checked = true;
+            document.getElementById('userId').disabled = false;
+            document.getElementById('vibePassId').disabled = true;
+
+            resetMessages();
+        }
+
+        // Main Update Function
+        async function updateProfile() {
+            const aiSecret = document.getElementById('aiSecret').value.trim();
+            const targetType = document.querySelector('input[name="target"]:checked').value;
+            const userId = document.getElementById('userId').value.trim();
+            const vibePassId = document.getElementById('vibePassId').value.trim();
+            const newProfile = document.getElementById('newProfile').value.trim();
+            const newScore = document.getElementById('newScore').value.trim();
+            const newRootHash = document.getElementById('newRootHash').value.trim();
+
+            // Validation
+            if (!aiSecret) {
+                showError('Please enter AI secret token');
+                return;
+            }
+
+            if (targetType === 'user' && !userId) {
+                showError('Please enter User ID');
+                return;
+            }
+
+            if (targetType === 'vibepass' && !vibePassId) {
+                showError('Please enter VibePass ID');
+                return;
+            }
+
+            if (!newProfile) {
+                showError('Please enter profile description');
+                return;
+            }
+
+            if (messageIds.length === 0) {
+                showError('Please add at least one message ID');
+                return;
+            }
+
+            resetMessages();
+            showLoading();
+
+            try {
+                // Build request payload
+                const payload = {
+                    messageIds: messageIds,
+                    newProfile: newProfile
+                };
+
+                // Add target
+                if (targetType === 'user') {
+                    payload.userId = userId;
+                } else {
+                    payload.vibePassId = vibePassId;
+                }
+
+                // Add optional fields
+                if (newScore) {
+                    payload.newScore = parseFloat(newScore);
+                }
+
+                if (newRootHash) {
+                    payload.newRootHash = newRootHash;
+                }
+
+                // Add parameters (only if any are filled)
+                const params = [];
+                let hasParams = false;
+                for (let i = 0; i < 5; i++) {
+                    const value = document.getElementById(`param${i}`).value.trim();
+                    if (value) {
+                        params.push(parseFloat(value));
+                        hasParams = true;
+                    } else {
+                        params.push(0);
+                    }
+                }
+                if (hasParams) {
+                    payload.newParams = params;
+                }
+
+                // Add tags
+                if (tags.length > 0) {
+                    payload.newTags = tags;
+                }
+
+                // Make API call
+                const response = await fetch(`${getApiBaseUrl()}/profile-updates`, {
+                    method: 'POST',
+                    mode: 'cors', // 处理跨域
+                    credentials: 'omit', // 不发送cookie
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-AI-Secret': aiSecret
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                hideLoading();
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                showSuccess('Profile updated successfully! 🎉');
+                showResult(result);
+
+            } catch (error) {
+                hideLoading();
+                showError(`Failed to update profile: ${error.message}`);
+            }
+        }
+
+        // Keyboard shortcuts
+        document.getElementById('newMessageId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addMessageId();
+            }
+        });
+
+        document.getElementById('newTag').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTag();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMessageIds();
+            renderTags();
+            document.getElementById('aiSecret').focus();
+        });
+    </script>
+</body>
+</html>

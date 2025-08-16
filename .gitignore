@@ -52,3 +52,5 @@ pids
 
 # Prisma
 /prisma/migrations
+
+temp
