@@ -185,31 +185,6 @@
             color: #d32f2f;
         }
 
-        .message-ids-container {
-            background: white;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-
-        .message-id-item {
-            background: #f5f5f5;
-            padding: 8px 12px;
-            margin: 5px 0;
-            border-radius: 8px;
-            display: flex;
-            justify-content: between;
-            align-items: center;
-        }
-
-        .message-id-item .remove {
-            margin-left: auto;
-            cursor: pointer;
-            color: #d32f2f;
-            font-weight: bold;
-        }
 
         .error {
             background: #ffebee;
@@ -254,18 +229,6 @@
             display: none;
         }
 
-        .target-selection {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .radio-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
 
         .result-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -319,36 +282,24 @@
         <!-- Target Selection Section -->
         <div class="section">
             <div class="section-title">🎯 Update Target</div>
-            <div class="radio-group">
-                <input type="radio" id="targetUser" name="target" value="user" checked>
-                <label for="targetUser">Update User Profile</label>
-                <input type="radio" id="targetVibePass" name="target" value="vibepass">
-                <label for="targetVibePass">Update VibePass</label>
-            </div>
-            <div class="target-selection">
+            <div class="form-row">
                 <div class="form-group">
                     <label for="userId">User ID:</label>
                     <input type="text" id="userId" placeholder="Enter user ID..." />
                 </div>
                 <div class="form-group">
-                    <label for="vibePassId">VibePass ID:</label>
-                    <input type="text" id="vibePassId" placeholder="Enter VibePass ID..." disabled />
+                    <label for="projectId">Project ID:</label>
+                    <input type="text" id="projectId" placeholder="Enter project ID..." />
                 </div>
             </div>
-        </div>
-
-        <!-- Message IDs Section -->
-        <div class="section">
-            <div class="section-title">💬 Message IDs</div>
-            <div class="form-group">
-                <label for="newMessageId">Add Message ID:</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="newMessageId" placeholder="Enter message ID..." style="flex: 1;" />
-                    <button class="btn btn-secondary" onclick="addMessageId()">Add</button>
-                </div>
+            <div style="text-align: center; margin: 15px 0;">
+                <button class="btn btn-secondary" onclick="checkVibePass()">🔍 Check VibePass Status</button>
             </div>
-            <div class="message-ids-container" id="messageIdsContainer">
-                <div style="color: #666; text-align: center; padding: 20px;">No message IDs added yet</div>
+            <div id="vibePassStatus" class="hidden">
+                <div class="form-group">
+                    <label for="vibePassId">Detected VibePass ID:</label>
+                    <input type="text" id="vibePassId" placeholder="No VibePass detected" readonly />
+                </div>
             </div>
         </div>
 
@@ -362,7 +313,7 @@
         </div>
 
         <!-- Score and Parameters Section -->
-        <div class="section">
+        <div class="section" id="vibePassOnlySection">
             <div class="section-title">📊 Score & Parameters (For VibePass Only)</div>
             <div class="form-group">
                 <label for="newScore">New Score:</label>
@@ -444,102 +395,67 @@
 
     <script>
         // API Configuration
-        let messageIds = [];
         let tags = [];
+        let currentVibePassId = null;
 
         function getApiBaseUrl() {
             return document.getElementById('apiEndpoint').value.trim() || 'http://localhost:3000';
         }
 
-        // LocalStorage Cache Functions
-        function saveToCache() {
-            const cacheData = {
-                apiEndpoint: document.getElementById('apiEndpoint').value,
-                aiSecret: document.getElementById('aiSecret').value,
-                targetType: document.querySelector('input[name="target"]:checked').value,
-                userId: document.getElementById('userId').value,
-                vibePassId: document.getElementById('vibePassId').value,
-                newProfile: document.getElementById('newProfile').value,
-                newScore: document.getElementById('newScore').value,
-                newRootHash: document.getElementById('newRootHash').value,
-                messageIds: messageIds,
-                tags: tags,
-                params: [
-                    document.getElementById('param0').value,
-                    document.getElementById('param1').value,
-                    document.getElementById('param2').value,
-                    document.getElementById('param3').value,
-                    document.getElementById('param4').value
-                ]
-            };
-            localStorage.setItem('profileUpdateDemoCache', JSON.stringify(cacheData));
-        }
+        // VibePass Check Function
+        async function checkVibePass() {
+            const userId = document.getElementById('userId').value.trim();
+            const projectId = document.getElementById('projectId').value.trim();
 
-        function loadFromCache() {
+            if (!userId || !projectId) {
+                showError('Please enter both User ID and Project ID');
+                return;
+            }
+
+            resetMessages();
+            showLoading();
+
             try {
-                const cacheData = localStorage.getItem('profileUpdateDemoCache');
-                if (cacheData) {
-                    const data = JSON.parse(cacheData);
-                    
-                    // Load basic fields
-                    if (data.apiEndpoint) document.getElementById('apiEndpoint').value = data.apiEndpoint;
-                    if (data.aiSecret) document.getElementById('aiSecret').value = data.aiSecret;
-                    if (data.userId) document.getElementById('userId').value = data.userId;
-                    if (data.vibePassId) document.getElementById('vibePassId').value = data.vibePassId;
-                    if (data.newProfile) document.getElementById('newProfile').value = data.newProfile;
-                    if (data.newScore) document.getElementById('newScore').value = data.newScore;
-                    if (data.newRootHash) document.getElementById('newRootHash').value = data.newRootHash;
-                    
-                    // Load target type
-                    if (data.targetType) {
-                        document.querySelector(`input[name="target"][value="${data.targetType}"]`).checked = true;
-                        // Trigger the change event to update UI
-                        document.querySelector(`input[name="target"][value="${data.targetType}"]`).dispatchEvent(new Event('change'));
-                    }
-                    
-                    // Load parameters
-                    if (data.params && Array.isArray(data.params)) {
-                        data.params.forEach((param, index) => {
-                            if (param) document.getElementById(`param${index}`).value = param;
-                        });
-                    }
-                    
-                    // Load arrays
-                    if (data.messageIds && Array.isArray(data.messageIds)) {
-                        messageIds = data.messageIds;
-                        renderMessageIds();
-                    }
-                    if (data.tags && Array.isArray(data.tags)) {
-                        tags = data.tags;
-                        renderTags();
-                    }
+                const response = await fetch(`${getApiBaseUrl()}/vibe-passes/check-exists?userId=${encodeURIComponent(userId)}&projectId=${encodeURIComponent(projectId)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+
+                hideLoading();
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
                 }
+
+                const result = (await response.json()).data;
+                const vibePassIdInput = document.getElementById('vibePassId');
+                
+                if (result.data.exists && result.data.vibePassId) {
+                    // VibePass exists
+                    currentVibePassId = result.data.vibePassId;
+                    vibePassIdInput.value = currentVibePassId;
+                    vibePassIdInput.style.borderColor = '#4caf50';
+                    showElement('vibePassStatus');
+                    showSuccess(`✅ VibePass found! ID: ${currentVibePassId}`);
+                } else {
+                    // No VibePass found
+                    currentVibePassId = null;
+                    vibePassIdInput.value = 'No VibePass found for this User + Project combination';
+                    vibePassIdInput.style.borderColor = '#ff9800';
+                    showElement('vibePassStatus');
+                    showSuccess('❌ No VibePass found. Profile update will be for User only.');
+                }
+
             } catch (error) {
-                console.warn('Failed to load cache:', error);
+                hideLoading();
+                showError(`Failed to check VibePass: ${error.message}`);
+                hideElement('vibePassStatus');
             }
         }
 
-        function clearCache() {
-            localStorage.removeItem('profileUpdateDemoCache');
-        }
 
-        // Target selection handlers
-        document.querySelectorAll('input[name="target"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const userIdInput = document.getElementById('userId');
-                const vibePassIdInput = document.getElementById('vibePassId');
-                
-                if (this.value === 'user') {
-                    userIdInput.disabled = false;
-                    vibePassIdInput.disabled = true;
-                    vibePassIdInput.value = '';
-                } else {
-                    userIdInput.disabled = true;
-                    userIdInput.value = '';
-                    vibePassIdInput.disabled = false;
-                }
-            });
-        });
 
         // Utility Functions
         function showElement(id) {
@@ -590,47 +506,6 @@
             hideElement('resultSection');
         }
 
-        // Message IDs Management
-        function addMessageId() {
-            const input = document.getElementById('newMessageId');
-            const messageId = input.value.trim();
-            
-            if (!messageId) {
-                showError('Please enter a message ID');
-                return;
-            }
-
-            if (messageIds.includes(messageId)) {
-                showError('Message ID already added');
-                return;
-            }
-
-            messageIds.push(messageId);
-            input.value = '';
-            renderMessageIds();
-            hideError();
-        }
-
-        function removeMessageId(messageId) {
-            messageIds = messageIds.filter(id => id !== messageId);
-            renderMessageIds();
-        }
-
-        function renderMessageIds() {
-            const container = document.getElementById('messageIdsContainer');
-            
-            if (messageIds.length === 0) {
-                container.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No message IDs added yet</div>';
-                return;
-            }
-
-            container.innerHTML = messageIds.map(id => `
-                <div class="message-id-item">
-                    <span>${id}</span>
-                    <span class="remove" onclick="removeMessageId('${id}')">✕</span>
-                </div>
-            `).join('');
-        }
 
         // Tags Management
         function addTag() {
@@ -678,11 +553,11 @@
         function clearForm() {
             // Clear basic inputs
             document.getElementById('userId').value = '';
+            document.getElementById('projectId').value = '';
             document.getElementById('vibePassId').value = '';
             document.getElementById('newProfile').value = '';
             document.getElementById('newScore').value = '';
             document.getElementById('newRootHash').value = '';
-            document.getElementById('newMessageId').value = '';
             document.getElementById('newTag').value = '';
 
             // Clear parameters
@@ -691,15 +566,12 @@
             }
 
             // Clear arrays
-            messageIds = [];
             tags = [];
-            renderMessageIds();
             renderTags();
 
-            // Reset target selection
-            document.getElementById('targetUser').checked = true;
-            document.getElementById('userId').disabled = false;
-            document.getElementById('vibePassId').disabled = true;
+            // Reset VibePass status
+            currentVibePassId = null;
+            hideElement('vibePassStatus');
 
             resetMessages();
         }
@@ -707,9 +579,7 @@
         // Main Update Function
         async function updateProfile() {
             const aiSecret = document.getElementById('aiSecret').value.trim();
-            const targetType = document.querySelector('input[name="target"]:checked').value;
             const userId = document.getElementById('userId').value.trim();
-            const vibePassId = document.getElementById('vibePassId').value.trim();
             const newProfile = document.getElementById('newProfile').value.trim();
             const newScore = document.getElementById('newScore').value.trim();
             const newRootHash = document.getElementById('newRootHash').value.trim();
@@ -720,23 +590,13 @@
                 return;
             }
 
-            if (targetType === 'user' && !userId) {
+            if (!userId) {
                 showError('Please enter User ID');
-                return;
-            }
-
-            if (targetType === 'vibepass' && !vibePassId) {
-                showError('Please enter VibePass ID');
                 return;
             }
 
             if (!newProfile) {
                 showError('Please enter profile description');
-                return;
-            }
-
-            if (messageIds.length === 0) {
-                showError('Please add at least one message ID');
                 return;
             }
 
@@ -746,15 +606,14 @@
             try {
                 // Build request payload
                 const payload = {
-                    messageIds: messageIds,
                     newProfile: newProfile
                 };
 
-                // Add target
-                if (targetType === 'user') {
-                    payload.userId = userId;
+                // Add target - if we have a VibePass, use it; otherwise use User
+                if (currentVibePassId) {
+                    payload.vibePassId = currentVibePassId;
                 } else {
-                    payload.vibePassId = vibePassId;
+                    payload.userId = userId;
                 }
 
                 // Add optional fields
@@ -766,20 +625,22 @@
                     payload.newRootHash = newRootHash;
                 }
 
-                // Add parameters (only if any are filled)
-                const params = [];
-                let hasParams = false;
-                for (let i = 0; i < 5; i++) {
-                    const value = document.getElementById(`param${i}`).value.trim();
-                    if (value) {
-                        params.push(parseFloat(value));
-                        hasParams = true;
-                    } else {
-                        params.push(0);
+                // Add parameters (only if any are filled and we have a VibePass)
+                if (currentVibePassId) {
+                    const params = [];
+                    let hasParams = false;
+                    for (let i = 0; i < 5; i++) {
+                        const value = document.getElementById(`param${i}`).value.trim();
+                        if (value) {
+                            params.push(parseFloat(value));
+                            hasParams = true;
+                        } else {
+                            params.push(0);
+                        }
                     }
-                }
-                if (hasParams) {
-                    payload.newParams = params;
+                    if (hasParams) {
+                        payload.newParams = params;
+                    }
                 }
 
                 // Add tags
@@ -790,8 +651,8 @@
                 // Make API call
                 const response = await fetch(`${getApiBaseUrl()}/profile-updates`, {
                     method: 'POST',
-                    mode: 'cors', // 处理跨域
-                    credentials: 'omit', // 不发送cookie
+                    mode: 'cors',
+                    credentials: 'omit',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-AI-Secret': aiSecret
@@ -817,12 +678,6 @@
         }
 
         // Keyboard shortcuts
-        document.getElementById('newMessageId').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addMessageId();
-            }
-        });
-
         document.getElementById('newTag').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 addTag();
@@ -831,7 +686,6 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            renderMessageIds();
             renderTags();
             document.getElementById('aiSecret').focus();
         });

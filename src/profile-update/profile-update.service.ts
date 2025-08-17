@@ -27,7 +27,7 @@ export class ProfileUpdateService {
   ) {}
 
   async createProfileUpdate(dto: CreateProfileUpdateDto): Promise<ProfileUpdateRecord> {
-    const {
+    let {
       userId,
       vibePassId,
       newProfile,
@@ -63,6 +63,7 @@ export class ProfileUpdateService {
       vibePass = await this.prisma.vibePass.findUnique({
         where: { id: vibePassId },
       });
+      userId = vibePass.userId;
 
       if (!vibePass) {
         throw new NotFoundException(`VibePass with ID ${vibePassId} not found`);
@@ -141,6 +142,8 @@ export class ProfileUpdateService {
       }
 
       return { profileUpdateRecord };
+    }, {
+      timeout: 30000,
     });
 
     // 如果创建了 ScoreRecord，异步更新排行榜
