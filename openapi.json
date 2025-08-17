@@ -290,6 +290,39 @@
         ]
       }
     },
+    "/vibe-users/by-user-id/{userId}": {
+      "get": {
+        "operationId": "VibeUserController_findByUserId",
+        "summary": "Find VibeUser by User table ID",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "User table ID (from Dolly system)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VibeUser found with VibePass information"
+          },
+          "404": {
+            "description": "No VibeUser found for this User ID"
+          }
+        },
+        "tags": [
+          "VibeUser Management"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/vibe-users/{id}": {
       "get": {
         "operationId": "VibeUserController_findOne",
@@ -2575,6 +2608,90 @@
           }
         ]
       }
+    },
+    "/leaderboard/history/user/{vibePassId}": {
+      "get": {
+        "operationId": "LeaderboardController_getUserScoreHistory",
+        "summary": "Get user score history for recent days",
+        "parameters": [
+          {
+            "name": "vibePassId",
+            "required": true,
+            "in": "path",
+            "description": "VibePass ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Number of days to retrieve (default: 7)",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user score history"
+          },
+          "404": {
+            "description": "VibePass not found"
+          }
+        },
+        "tags": [
+          "Leaderboard"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/leaderboard/history/project/{vibeProjectId}": {
+      "get": {
+        "operationId": "LeaderboardController_getProjectScoreHistory",
+        "summary": "Get project score history for recent days",
+        "parameters": [
+          {
+            "name": "vibeProjectId",
+            "required": true,
+            "in": "path",
+            "description": "VibeProject ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Number of days to retrieve (default: 7)",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved project score history"
+          },
+          "404": {
+            "description": "VibeProject not found"
+          }
+        },
+        "tags": [
+          "Leaderboard"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -2979,18 +3096,6 @@
             "description": "VibePass ID (for VibePass profile update)",
             "example": "cuid2-example-vibe-pass-id"
           },
-          "messageIds": {
-            "description": "Message IDs involved in this analysis",
-            "example": [
-              "msg1",
-              "msg2",
-              "msg3"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "newProfile": {
             "type": "string",
             "description": "New analyzed user profile",
@@ -3034,7 +3139,6 @@
           }
         },
         "required": [
-          "messageIds",
           "newProfile"
         ]
       }

@@ -254,10 +254,14 @@ export class LeaderboardService {
       });
 
       if (vibePass) {
+        // 计算昨日积分变化量
+        const yesterdayChange = await this.getYesterdayScoreChange(vibePassId);
+        
         formattedData.push({
           ...vibePass,
           rank,
           score,
+          yesterdayChange,
           params: vibePass.params ? JSON.parse(vibePass.params) : null,
           tags: vibePass.tags ? JSON.parse(vibePass.tags) : null,
         });
@@ -320,10 +324,14 @@ export class LeaderboardService {
       });
 
       if (vibePass) {
+        // 计算昨日积分变化量
+        const yesterdayChange = await this.getYesterdayScoreChange(vibePassId);
+        
         formattedData.push({
           ...vibePass,
           rank,
           score,
+          yesterdayChange,
           params: vibePass.params ? JSON.parse(vibePass.params) : null,
           tags: vibePass.tags ? JSON.parse(vibePass.tags) : null,
         });
@@ -415,6 +423,178 @@ export class LeaderboardService {
         : 0,
       timeWindow,
       type: 'global',
+    };
+  }
+
+  // 计算昨日积分变化量
+  private async getYesterdayScoreChange(vibePassId: string): Promise<number> {
+    const now = new Date();
+    const yesterdayStart = new Date(now);
+    yesterdayStart.setDate(now.getDate() - 1);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    
+    const yesterdayEnd = new Date(yesterdayStart);
+    yesterdayEnd.setHours(23, 59, 59, 999);
+
+    // 获取昨日的积分变化记录
+    const scoreChanges = await this.prisma.scoreRecord.findMany({
+      where: {
+        vibePassId,
+        createdAt: {
+          gte: yesterdayStart,
+          lte: yesterdayEnd,
+        },
+      },
+    });
+
+    // 计算总变化量
+    return scoreChanges.reduce((total, record) => {
+      return total + record.value.toNumber();
+    }, 0);
+  }
+
+  // 获取最近X天的历史积分曲线
+  async getScoreHistory(vibePassId: string, days: number = 7) {
+    const vibePass = await this.prisma.vibePass.findUnique({
+      where: { id: vibePassId },
+    });
+
+    if (!vibePass) {
+      throw new NotFoundException(`VibePass with ID ${vibePassId} not found`);
+    }
+
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // 获取历史积分记录
+    const scoreRecords = await this.prisma.scoreRecord.findMany({
+      where: {
+        vibePassId,
+        createdAt: {
+          gte: startDate,
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // 构建每日积分曲线
+    const dailyScores = [];
+    let currentScore = vibePass.score.toNumber();
+    
+    // 从最新积分开始，倒推历史积分
+    for (let i = 0; i < days; i++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(date.getDate() + 1);
+      
+      // 计算这一天的积分变化
+      const dayChanges = scoreRecords.filter(record => {
+        const recordDate = new Date(record.createdAt);
+        return recordDate >= date && recordDate < nextDate;
+      });
+      
+      const dayChange = dayChanges.reduce((sum, record) => sum + record.value.toNumber(), 0);
+      
+      // 如果是今天，使用当前积分；否则计算历史积分
+      const dayScore = i === 0 ? currentScore : currentScore - dayChange;
+      
+      dailyScores.unshift({
+        date: date.toISOString().split('T')[0],
+        score: dayScore,
+        change: dayChange,
+        changeCount: dayChanges.length,
+      });
+      
+      // 为下一次迭代更新当前积分
+      if (i < days - 1) {
+        currentScore = dayScore;
+      }
+    }
+
+    return {
+      vibePassId,
+      days,
+      currentScore: vibePass.score.toNumber(),
+      history: dailyScores,
+      totalChange: dailyScores.reduce((sum, day) => sum + day.change, 0),
+    };
+  }
+
+  // 获取项目的历史积分曲线
+  async getProjectScoreHistory(vibeProjectId: string, days: number = 7) {
+    const vibeProject = await this.prisma.vibeProject.findUnique({
+      where: { id: vibeProjectId },
+    });
+
+    if (!vibeProject) {
+      throw new NotFoundException(`VibeProject with ID ${vibeProjectId} not found`);
+    }
+
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // 获取项目内所有用户的积分记录
+    const scoreRecords = await this.prisma.scoreRecord.findMany({
+      where: {
+        vibeProjectId,
+        createdAt: {
+          gte: startDate,
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // 构建每日项目总积分曲线
+    const dailyScores = [];
+    let currentTotalScore = vibeProject.score.toNumber();
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(date.getDate() + 1);
+      
+      // 计算这一天的项目积分变化
+      const dayChanges = scoreRecords.filter(record => {
+        const recordDate = new Date(record.createdAt);
+        return recordDate >= date && recordDate < nextDate;
+      });
+      
+      const dayChange = dayChanges.reduce((sum, record) => sum + record.value.toNumber(), 0);
+      const dayScore = i === 0 ? currentTotalScore : currentTotalScore - dayChange;
+      
+      dailyScores.unshift({
+        date: date.toISOString().split('T')[0],
+        score: dayScore,
+        change: dayChange,
+        changeCount: dayChanges.length,
+        userChanges: dayChanges.length, // 参与积分变化的用户数量
+      });
+      
+      if (i < days - 1) {
+        currentTotalScore = dayScore;
+      }
+    }
+
+    return {
+      vibeProjectId,
+      days,
+      currentScore: vibeProject.score.toNumber(),
+      history: dailyScores,
+      totalChange: dailyScores.reduce((sum, day) => sum + day.change, 0),
     };
   }
 }

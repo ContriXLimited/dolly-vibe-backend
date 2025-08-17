@@ -24,15 +24,6 @@ export class CreateProfileUpdateDto {
   @IsString()
   vibePassId?: string;
 
-  @ApiProperty({
-    description: 'Message IDs involved in this analysis',
-    example: ['msg1', 'msg2', 'msg3'],
-    type: [String],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsNotEmpty({ each: true })
-  messageIds: string[];
 
   @ApiProperty({
     description: 'New analyzed user profile',

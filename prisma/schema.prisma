@@ -680,7 +680,6 @@ model ProfileUpdateRecord {
   id          String    @id @db.VarChar(64)
   userId      String?   @db.VarChar(64) // User ID（即原有的 User 表）
   vibePassId  String?   @db.VarChar(64) // VibePass ID（如果这个 User 已经开通了 VibePass）
-  messageIds  String    @db.Text // 本次分析涉及的 MessageId 列表（JSON 数组）
   newProfile  String    @db.Text // 新分析的用户画像
   newScore    Decimal?  @db.Decimal(10, 2) // 新分析的 INFT 总分（AI 判断）
   newParams   String?   @db.Text // 新判断的 INFT 各项属性值（JSON 数组，用于绘制雷达图，AI 判断）
@@ -698,14 +697,20 @@ model ProfileUpdateRecord {
 model ScoreRecord {
   id             String          @id @db.VarChar(64)
   vibePassId     String          @db.VarChar(64) // VibePass ID
+  vibeUserId     String          @db.VarChar(64) // VibeUser ID（冗余字段，便于查询）
+  vibeProjectId  String          @db.VarChar(64) // VibeProject ID（冗余字段，便于查询）
   value          Decimal         @db.Decimal(10, 2) // 积分变化数量（可以是正数或负数）
   type           ScoreRecordType // 积分变化类型
   updateRecordId String?         @db.VarChar(64) // 积分变化对应的 ProfileUpdateRecord 的 ID
   createdAt      DateTime        @default(now()) // 记录创建时间
 
   @@index([vibePassId], map: "score_record_vibePassId_index")
+  @@index([vibeUserId], map: "score_record_vibeUserId_index")
+  @@index([vibeProjectId], map: "score_record_vibeProjectId_index")
   @@index([type], map: "score_record_type_index")
   @@index([updateRecordId], map: "score_record_updateRecordId_index")
   @@index([vibePassId, createdAt], map: "score_record_vibe_pass_created_index")
+  @@index([vibeUserId, createdAt], map: "score_record_vibe_user_created_index")
+  @@index([vibeProjectId, createdAt], map: "score_record_vibe_project_created_index")
   @@map("score_records")
 }

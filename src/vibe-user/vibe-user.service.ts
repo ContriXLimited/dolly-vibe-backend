@@ -108,6 +108,40 @@ export class VibeUserService {
     });
   }
 
+  async findByUserId(userId: string): Promise<any> {
+    // Find VibePass records that link to this User ID
+    const vibePass = await this.prisma.vibePass.findFirst({
+      where: { userId },
+    });
+
+    if (!vibePass) {
+      throw new NotFoundException(`No VibeUser found for User ID: ${userId}`);
+    }
+
+    // Fetch related data separately
+    const [vibeUser, vibeProject] = await Promise.all([
+      this.prisma.vibeUser.findUnique({
+        where: { id: vibePass.vibeUserId },
+      }),
+      this.prisma.vibeProject.findUnique({
+        where: { id: vibePass.vibeProjectId },
+      }),
+    ]);
+
+    return {
+      vibeUser,
+      vibePass: {
+        id: vibePass.id,
+        vibeProjectId: vibePass.vibeProjectId,
+        score: vibePass.score,
+        status: vibePass.status,
+        createdAt: vibePass.createdAt,
+        updatedAt: vibePass.updatedAt,
+      },
+      vibeProject,
+    };
+  }
+
   async update(id: string, updateVibeUserDto: UpdateVibeUserDto): Promise<VibeUser> {
     const existingUser = await this.findOne(id);
 

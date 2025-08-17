@@ -10,6 +10,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { LeaderboardService } from './leaderboard.service';
@@ -93,6 +94,50 @@ export class LeaderboardController {
     );
     return {
       message: 'Successfully retrieved user global rank',
+      data: result,
+    };
+  }
+
+  @Get('history/user/:vibePassId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user score history for recent days' })
+  @ApiParam({ name: 'vibePassId', description: 'VibePass ID' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days to retrieve (default: 7)' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved user score history' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  async getUserScoreHistory(
+    @Param('vibePassId') vibePassId: string,
+    @Query('days') days?: number,
+  ) {
+    const result = await this.leaderboardService.getScoreHistory(
+      vibePassId,
+      days || 7,
+    );
+    return {
+      message: 'Successfully retrieved user score history',
+      data: result,
+    };
+  }
+
+  @Get('history/project/:vibeProjectId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get project score history for recent days' })
+  @ApiParam({ name: 'vibeProjectId', description: 'VibeProject ID' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days to retrieve (default: 7)' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved project score history' })
+  @ApiResponse({ status: 404, description: 'VibeProject not found' })
+  async getProjectScoreHistory(
+    @Param('vibeProjectId') vibeProjectId: string,
+    @Query('days') days?: number,
+  ) {
+    const result = await this.leaderboardService.getProjectScoreHistory(
+      vibeProjectId,
+      days || 7,
+    );
+    return {
+      message: 'Successfully retrieved project score history',
       data: result,
     };
   }

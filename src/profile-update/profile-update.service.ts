@@ -30,7 +30,6 @@ export class ProfileUpdateService {
     const {
       userId,
       vibePassId,
-      messageIds,
       newProfile,
       newScore,
       newParams,
@@ -78,7 +77,6 @@ export class ProfileUpdateService {
           id: createId(),
           userId,
           vibePassId,
-          messageIds: JSON.stringify(messageIds),
           newProfile,
           newScore: newScore ? new Prisma.Decimal(newScore) : null,
           newParams: newParams ? JSON.stringify(newParams) : null,
@@ -98,6 +96,8 @@ export class ProfileUpdateService {
             data: {
               id: createId(),
               vibePassId,
+              vibeUserId: vibePass.vibeUserId,
+              vibeProjectId: vibePass.vibeProjectId,
               value: new Prisma.Decimal(scoreChange),
               type: ScoreRecordType.PROFILE_UPDATE,
               updateRecordId: profileUpdateRecord.id,
