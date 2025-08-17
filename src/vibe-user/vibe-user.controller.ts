@@ -24,7 +24,6 @@ import { CreateVibeUserDto } from './dto/create-vibe-user.dto';
 import { UpdateVibeUserDto } from './dto/update-vibe-user.dto';
 import { QueryVibeUserDto } from './dto/query-vibe-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Public } from '../common/decorators/public.decorator';
 import { VibeUserStatus } from '@prisma/client';
 
 @ApiTags('VibeUser Management')
@@ -82,15 +81,6 @@ export class VibeUserController {
     return this.vibeUserService.findByTwitterId(twitterId);
   }
 
-  @Get('by-user-id/:userId')
-  @Public()
-  @ApiOperation({ summary: 'Find VibeUser by User table ID' })
-  @ApiResponse({ status: 200, description: 'VibeUser found with VibePass information' })
-  @ApiResponse({ status: 404, description: 'No VibeUser found for this User ID' })
-  @ApiParam({ name: 'userId', description: 'User table ID (from Dolly system)' })
-  findByUserId(@Param('userId') userId: string) {
-    return this.vibeUserService.findByUserId(userId);
-  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get VibeUser by ID' })

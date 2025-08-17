@@ -188,26 +188,6 @@ paths:
         - VibeUser Management
       security:
         - bearer: []
-  /vibe-users/by-user-id/{userId}:
-    get:
-      operationId: VibeUserController_findByUserId
-      summary: Find VibeUser by User table ID
-      parameters:
-        - name: userId
-          required: true
-          in: path
-          description: User table ID (from Dolly system)
-          schema:
-            type: string
-      responses:
-        '200':
-          description: VibeUser found with VibePass information
-        '404':
-          description: No VibeUser found for this User ID
-      tags:
-        - VibeUser Management
-      security:
-        - bearer: []
   /vibe-users/{id}:
     get:
       operationId: VibeUserController_findOne
@@ -1413,6 +1393,32 @@ paths:
       responses:
         '200':
           description: Successfully retrieved VibePasses
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
+  /vibe-passes/check-exists:
+    get:
+      operationId: VibePassController_checkVibePassExists
+      summary: Check if VibePass exists for given User ID and Project ID
+      parameters:
+        - name: userId
+          required: true
+          in: query
+          description: User table ID (from Dolly system)
+          schema:
+            example: cuid2-example-user-id
+            type: string
+        - name: projectId
+          required: true
+          in: query
+          description: Project table ID (from Dolly system)
+          schema:
+            example: cuid2-example-project-id
+            type: string
+      responses:
+        '200':
+          description: Successfully checked VibePass existence
       tags:
         - VibePass Management
       security:

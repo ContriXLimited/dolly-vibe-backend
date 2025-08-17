@@ -509,4 +509,34 @@ export class VibePassService {
 
     return vibeProject;
   }
+
+  async checkVibePassExists(userId: string, projectId: string): Promise<{ exists: boolean }> {
+    // 首先根据 projectId 查找对应的 VibeProject
+    const vibeProject = await this.prisma.vibeProject.findFirst({
+      where: { projectId },
+    });
+
+    if (!vibeProject) {
+      return { exists: false };
+    }
+
+    // 然后查找是否有对应的 User 记录
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { exists: false };
+    }
+
+    // 最后检查是否存在对应的 VibePass
+    const vibePass = await this.prisma.vibePass.findFirst({
+      where: {
+        userId: userId,
+        vibeProjectId: vibeProject.id,
+      },
+    });
+
+    return { exists: !!vibePass };
+  }
 }

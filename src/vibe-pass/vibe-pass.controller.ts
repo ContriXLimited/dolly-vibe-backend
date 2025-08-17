@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { VibePassService } from './vibe-pass.service';
 import { JoinProjectDto } from './dto/join-project.dto';
@@ -21,6 +22,7 @@ import { UploadMetadataDto } from './dto/upload-metadata.dto';
 import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
 import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { VibeUser } from '@prisma/client';
 
@@ -109,6 +111,23 @@ export class VibePassController {
     return {
       message: 'Successfully retrieved VibePasses',
       data: vibePasses,
+    };
+  }
+
+  @Get('check-exists')
+  @Public()
+  @ApiOperation({ summary: 'Check if VibePass exists for given User ID and Project ID' })
+  @ApiResponse({ status: 200, description: 'Successfully checked VibePass existence' })
+  @ApiQuery({ name: 'userId', description: 'User table ID (from Dolly system)', example: 'cuid2-example-user-id' })
+  @ApiQuery({ name: 'projectId', description: 'Project table ID (from Dolly system)', example: 'cuid2-example-project-id' })
+  async checkVibePassExists(
+    @Query('userId') userId: string,
+    @Query('projectId') projectId: string,
+  ) {
+    const result = await this.vibePassService.checkVibePassExists(userId, projectId);
+    return {
+      message: 'Successfully checked VibePass existence',
+      data: result,
     };
   }
 
