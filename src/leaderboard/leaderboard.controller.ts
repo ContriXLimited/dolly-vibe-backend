@@ -16,6 +16,7 @@ import {
 import { LeaderboardService } from './leaderboard.service';
 import { QueryLeaderboardDto, TimeWindow } from './dto/query-leaderboard.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Leaderboard')
 @Controller('leaderboard')
@@ -23,8 +24,7 @@ export class LeaderboardController {
   constructor(private readonly leaderboardService: LeaderboardService) {}
 
   @Get(':vibeProjectId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Public()
   @ApiOperation({ summary: 'Get project leaderboard' })
   @ApiParam({ name: 'vibeProjectId', description: 'VibeProject ID' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved project leaderboard' })
@@ -41,8 +41,7 @@ export class LeaderboardController {
   }
 
   @Get('global/all')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Public()
   @ApiOperation({ summary: 'Get global leaderboard' })
   @ApiResponse({ status: 200, description: 'Successfully retrieved global leaderboard' })
   async getGlobalLeaderboard(@Query() dto: QueryLeaderboardDto) {

@@ -1342,6 +1342,32 @@ paths:
         - VibePass Management
       security:
         - bearer: []
+  /vibe-passes/check-exists:
+    get:
+      operationId: VibePassController_checkVibePassExists
+      summary: Check if VibePass exists for given User ID and Project ID
+      parameters:
+        - name: userId
+          required: true
+          in: query
+          description: User table ID (from Dolly system)
+          schema:
+            example: cuid2-example-user-id
+            type: string
+        - name: projectId
+          required: true
+          in: query
+          description: Project table ID (from Dolly system)
+          schema:
+            example: cuid2-example-project-id
+            type: string
+      responses:
+        '200':
+          description: Successfully checked VibePass existence
+      tags:
+        - VibePass Management
+      security:
+        - bearer: []
   /vibe-passes/{id}:
     get:
       operationId: VibePassController_getVibePassById
@@ -1393,32 +1419,6 @@ paths:
       responses:
         '200':
           description: Successfully retrieved VibePasses
-      tags:
-        - VibePass Management
-      security:
-        - bearer: []
-  /vibe-passes/check-exists:
-    get:
-      operationId: VibePassController_checkVibePassExists
-      summary: Check if VibePass exists for given User ID and Project ID
-      parameters:
-        - name: userId
-          required: true
-          in: query
-          description: User table ID (from Dolly system)
-          schema:
-            example: cuid2-example-user-id
-            type: string
-        - name: projectId
-          required: true
-          in: query
-          description: Project table ID (from Dolly system)
-          schema:
-            example: cuid2-example-project-id
-            type: string
-      responses:
-        '200':
-          description: Successfully checked VibePass existence
       tags:
         - VibePass Management
       security:
@@ -1620,8 +1620,6 @@ paths:
           description: VibeProject not found
       tags:
         - Leaderboard
-      security:
-        - bearer: []
   /leaderboard/global/all:
     get:
       operationId: LeaderboardController_getGlobalLeaderboard
@@ -1660,8 +1658,6 @@ paths:
           description: Successfully retrieved global leaderboard
       tags:
         - Leaderboard
-      security:
-        - bearer: []
   /leaderboard/{vibeProjectId}/rank/{vibePassId}:
     get:
       operationId: LeaderboardController_getUserRank

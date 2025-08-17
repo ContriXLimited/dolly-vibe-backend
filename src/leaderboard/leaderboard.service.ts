@@ -246,6 +246,7 @@ export class LeaderboardService {
         select: {
           id: true,
           vibeUserId: true,
+          userId: true,
           params: true,
           tags: true,
           tokenId: true,
@@ -254,6 +255,12 @@ export class LeaderboardService {
       });
 
       if (vibePass) {
+        // 获取对应的 User 信息
+        const user = await this.prisma.user.findUnique({
+          where: { id: vibePass.userId },
+          select: { name: true },
+        });
+
         // 计算昨日积分变化量
         const yesterdayChange = await this.getYesterdayScoreChange(vibePassId);
         
@@ -262,6 +269,7 @@ export class LeaderboardService {
           rank,
           score,
           yesterdayChange,
+          userName: user?.name || null,
           params: vibePass.params ? JSON.parse(vibePass.params) : null,
           tags: vibePass.tags ? JSON.parse(vibePass.tags) : null,
         });
@@ -316,6 +324,7 @@ export class LeaderboardService {
           id: true,
           vibeUserId: true,
           vibeProjectId: true,
+          userId: true,
           params: true,
           tags: true,
           tokenId: true,
@@ -324,6 +333,12 @@ export class LeaderboardService {
       });
 
       if (vibePass) {
+        // 获取对应的 User 信息
+        const user = await this.prisma.user.findUnique({
+          where: { id: vibePass.userId },
+          select: { name: true },
+        });
+
         // 计算昨日积分变化量
         const yesterdayChange = await this.getYesterdayScoreChange(vibePassId);
         
@@ -332,6 +347,7 @@ export class LeaderboardService {
           rank,
           score,
           yesterdayChange,
+          userName: user?.name || null,
           params: vibePass.params ? JSON.parse(vibePass.params) : null,
           tags: vibePass.tags ? JSON.parse(vibePass.tags) : null,
         });
