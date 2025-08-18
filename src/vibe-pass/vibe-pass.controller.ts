@@ -104,17 +104,22 @@ export class VibePassController {
     };
   }
 
-  @Post(':id/get-mint-params')
+  @Get(':id/get-mint-params')
   @ApiOperation({ summary: 'Get mint contract call parameters for frontend to execute transaction' })
   @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiQuery({ name: 'walletAddress', description: 'User wallet address (recipient of the INFT)', example: '0x1234567890123456789012345678901234567890' })
+  @ApiQuery({ name: 'rootHash', description: 'Root hash from metadata upload', example: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890' })
+  @ApiQuery({ name: 'sealedKey', description: 'Sealed key from metadata upload (optional, will use stored value if not provided)', required: false, example: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890' })
   @ApiResponse({ status: 200, description: 'Successfully prepared mint contract call parameters' })
   @ApiResponse({ status: 404, description: 'VibePass not found' })
   @ApiResponse({ status: 409, description: 'INFT already minted' })
   async getMintParams(
     @Param('id') id: string,
-    @Body() dto: GetMintParamsDto,
+    @Query('walletAddress') walletAddress: string,
+    @Query('rootHash') rootHash: string,
+    @Query('sealedKey') sealedKey?: string,
   ) {
-    const result = await this.vibePassService.getMintParams(id, dto);
+    const result = await this.vibePassService.getMintParams(id, { walletAddress, rootHash, sealedKey });
     return {
       message: 'Successfully prepared mint contract call parameters',
       data: result,

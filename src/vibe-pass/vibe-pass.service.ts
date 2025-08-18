@@ -566,7 +566,7 @@ export class VibePassService {
   /**
    * Get mint contract call parameters for frontend to execute the transaction
    */
-  async getMintParams(vibePassId: string, dto: GetMintParamsDto): Promise<{
+  async getMintParams(vibePassId: string, dto: { walletAddress: string; rootHash: string; sealedKey?: string }): Promise<{
     contractAddress: string;
     methodName: string;
     params: any[];
@@ -580,7 +580,7 @@ export class VibePassService {
       dataDescriptions: string[];
     };
   }> {
-    const { walletAddress, nonce, signature, rootHash, sealedKey, tokenMetadata } = dto;
+    const { walletAddress, rootHash, sealedKey } = dto;
 
     // 验证 VibePass 是否存在
     const vibePass = await this.prisma.vibePass.findUnique({
@@ -596,52 +596,26 @@ export class VibePassService {
       throw new ConflictException('INFT has already been minted for this VibePass');
     }
 
-    // 验证钱包签名
-    try {
-      await this.walletVerificationService.verifySignatureOnly(
-        walletAddress,
-        nonce,
-        signature,
-      );
-    } catch (error) {
-      throw new BadRequestException(`Invalid wallet signature: ${error.message}`);
+    // 获取 sealedKey：优先使用传入的，否则从数据库获取
+    let finalSealedKey = sealedKey;
+    if (!finalSealedKey) {
+      if (!vibePass.sealedKey) {
+        throw new BadRequestException('SealedKey not found. Please upload metadata first or provide sealedKey.');
+      }
+      finalSealedKey = vibePass.sealedKey;
     }
 
     // 获取用户数据
-    const { aiModelData } = await this.getUserAIModelData(vibePass, walletAddress, tokenMetadata);
+    const { aiModelData } = await this.getUserAIModelData(vibePass, walletAddress);
 
     this.logger.log(`Preparing mint parameters for VibePass ${vibePassId} to wallet ${walletAddress}`);
 
     try {
-      let encryptedResult: EncryptedMetadataResult;
-
-      if (rootHash && sealedKey) {
-        // 使用提供的 rootHash 和 sealedKey
-        encryptedResult = {
-          rootHash,
-          sealedKey,
-        };
-        this.logger.log('Using provided rootHash and sealedKey');
-      } else if (rootHash && vibePass.sealedKey) {
-        // 使用提供的 rootHash 和数据库中的 sealedKey
-        encryptedResult = {
-          rootHash,
-          sealedKey: vibePass.sealedKey,
-        };
-        this.logger.log('Using provided rootHash and stored sealedKey');
-      } else {
-        // 上传新的元数据
-        this.logger.log('Uploading new metadata...');
-        encryptedResult = await this.agentNFTService.uploadMetadata(aiModelData, walletAddress);
-        
-        // 保存 sealedKey 到数据库
-        await this.prisma.vibePass.update({
-          where: { id: vibePassId },
-          data: {
-            sealedKey: encryptedResult.sealedKey,
-          },
-        });
-      }
+      // 构造加密结果
+      const encryptedResult: EncryptedMetadataResult = {
+        rootHash,
+        sealedKey: finalSealedKey,
+      };
 
       // 获取合约调用参数
       const mintCallParams = await this.agentNFTService.getMintCallParams(

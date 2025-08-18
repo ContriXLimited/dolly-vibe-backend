@@ -2021,7 +2021,7 @@
       }
     },
     "/vibe-passes/{id}/get-mint-params": {
-      "post": {
+      "get": {
         "operationId": "VibePassController_getMintParams",
         "summary": "Get mint contract call parameters for frontend to execute transaction",
         "parameters": [
@@ -2033,18 +2033,38 @@
             "schema": {
               "type": "string"
             }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetMintParamsDto"
-              }
+          },
+          {
+            "name": "walletAddress",
+            "required": true,
+            "in": "query",
+            "description": "User wallet address (recipient of the INFT)",
+            "schema": {
+              "example": "0x1234567890123456789012345678901234567890",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rootHash",
+            "required": true,
+            "in": "query",
+            "description": "Root hash from metadata upload",
+            "schema": {
+              "example": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sealedKey",
+            "required": false,
+            "in": "query",
+            "description": "Sealed key from metadata upload (optional, will use stored value if not provided)",
+            "schema": {
+              "example": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              "type": "string"
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Successfully prepared mint contract call parameters"
@@ -3123,49 +3143,6 @@
         "required": [
           "walletAddress",
           "rootHash",
-          "nonce",
-          "signature"
-        ]
-      },
-      "GetMintParamsDto": {
-        "type": "object",
-        "properties": {
-          "walletAddress": {
-            "type": "string",
-            "description": "User wallet address (recipient of the INFT)",
-            "example": "0x1234567890123456789012345678901234567890"
-          },
-          "nonce": {
-            "type": "string",
-            "description": "Nonce from wallet verification",
-            "example": "abc123def456"
-          },
-          "signature": {
-            "type": "string",
-            "description": "User wallet signature for minting authorization",
-            "example": "0x123456789abcdef..."
-          },
-          "rootHash": {
-            "type": "string",
-            "description": "Root hash from metadata upload (required if metadata was pre-uploaded)",
-            "example": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
-          },
-          "sealedKey": {
-            "type": "string",
-            "description": "Sealed key from metadata upload (optional, will use stored value if not provided)",
-            "example": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
-          },
-          "tokenMetadata": {
-            "type": "object",
-            "description": "Additional token metadata (optional)",
-            "example": {
-              "name": "User INFT #1",
-              "description": "Intelligent NFT for user"
-            }
-          }
-        },
-        "required": [
-          "walletAddress",
           "nonce",
           "signature"
         ]
