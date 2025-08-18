@@ -13,6 +13,7 @@ import { JoinProjectDto } from './dto/join-project.dto';
 import { MintInftDto } from './dto/mint-inft.dto';
 import { UploadMetadataDto } from './dto/upload-metadata.dto';
 import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
+import { GetMintParamsDto } from './dto/get-mint-params.dto';
 import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
 import { VibePass, VibePassStatus, User, VibeUser } from '@prisma/client';
 import { AIModelData, EncryptedMetadataResult } from '@/blockchain/lib/types';
@@ -105,7 +106,7 @@ export class VibePassService {
       },
     });
 
-    return vibePass;
+    return this.serializeVibePassJsonFields(vibePass);
   }
 
   async mintInft(vibePassId: string, dto: MintInftDto): Promise<VibePass> {
@@ -216,7 +217,7 @@ export class VibePassService {
         },
       });
 
-      return updatedVibePass;
+      return this.serializeVibePassJsonFields(updatedVibePass);
     } catch (error) {
       this.logger.error(`Failed to mint INFT: ${error.message}`);
       throw new BadRequestException(`Failed to mint INFT: ${error.message}`);
@@ -368,11 +369,29 @@ export class VibePassService {
         },
       });
 
-      return updatedVibePass;
+      return this.serializeVibePassJsonFields(updatedVibePass);
     } catch (error) {
       this.logger.error(`Failed to mint INFT: ${error.message}`);
       throw new BadRequestException(`Failed to mint INFT: ${error.message}`);
     }
+  }
+
+  /**
+   * Helper method to serialize VibePass JSON fields
+   */
+  private serializeVibePassJsonFields(vibePass: VibePass): any {
+    return {
+      ...vibePass,
+      params: vibePass.params ? JSON.parse(vibePass.params) : null,
+      tags: vibePass.tags ? JSON.parse(vibePass.tags) : null,
+    };
+  }
+
+  /**
+   * Helper method to serialize array of VibePass JSON fields
+   */
+  private serializeVibePassArrayJsonFields(vibePasses: VibePass[]): any[] {
+    return vibePasses.map(vibePass => this.serializeVibePassJsonFields(vibePass));
   }
 
   /**
@@ -447,7 +466,7 @@ export class VibePassService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return vibePasses;
+    return this.serializeVibePassArrayJsonFields(vibePasses);
   }
 
   async findById(id: string): Promise<VibePass> {
@@ -459,7 +478,7 @@ export class VibePassService {
       throw new NotFoundException(`VibePass with ID ${id} not found`);
     }
 
-    return vibePass;
+    return this.serializeVibePassJsonFields(vibePass);
   }
 
   async findMany(dto: QueryVibePassDto) {
@@ -483,7 +502,7 @@ export class VibePassService {
     ]);
 
     return {
-      data: vibePasses,
+      data: this.serializeVibePassArrayJsonFields(vibePasses),
       pagination: {
         page,
         limit,
@@ -541,6 +560,110 @@ export class VibePassService {
       return { exists: true, vibePassId: vibePass.id };
     } else {
       return { exists: false };
+    }
+  }
+
+  /**
+   * Get mint contract call parameters for frontend to execute the transaction
+   */
+  async getMintParams(vibePassId: string, dto: GetMintParamsDto): Promise<{
+    contractAddress: string;
+    methodName: string;
+    params: any[];
+    abi: any[];
+    to: string;
+    data: string;
+    metadata: {
+      rootHash: string;
+      sealedKey: string;
+      proof: string;
+      dataDescriptions: string[];
+    };
+  }> {
+    const { walletAddress, nonce, signature, rootHash, sealedKey, tokenMetadata } = dto;
+
+    // 验证 VibePass 是否存在
+    const vibePass = await this.prisma.vibePass.findUnique({
+      where: { id: vibePassId },
+    });
+
+    if (!vibePass) {
+      throw new NotFoundException(`VibePass with ID ${vibePassId} not found`);
+    }
+
+    // 检查是否已经铸造
+    if (vibePass.tokenId) {
+      throw new ConflictException('INFT has already been minted for this VibePass');
+    }
+
+    // 验证钱包签名
+    try {
+      await this.walletVerificationService.verifySignatureOnly(
+        walletAddress,
+        nonce,
+        signature,
+      );
+    } catch (error) {
+      throw new BadRequestException(`Invalid wallet signature: ${error.message}`);
+    }
+
+    // 获取用户数据
+    const { aiModelData } = await this.getUserAIModelData(vibePass, walletAddress, tokenMetadata);
+
+    this.logger.log(`Preparing mint parameters for VibePass ${vibePassId} to wallet ${walletAddress}`);
+
+    try {
+      let encryptedResult: EncryptedMetadataResult;
+
+      if (rootHash && sealedKey) {
+        // 使用提供的 rootHash 和 sealedKey
+        encryptedResult = {
+          rootHash,
+          sealedKey,
+        };
+        this.logger.log('Using provided rootHash and sealedKey');
+      } else if (rootHash && vibePass.sealedKey) {
+        // 使用提供的 rootHash 和数据库中的 sealedKey
+        encryptedResult = {
+          rootHash,
+          sealedKey: vibePass.sealedKey,
+        };
+        this.logger.log('Using provided rootHash and stored sealedKey');
+      } else {
+        // 上传新的元数据
+        this.logger.log('Uploading new metadata...');
+        encryptedResult = await this.agentNFTService.uploadMetadata(aiModelData, walletAddress);
+        
+        // 保存 sealedKey 到数据库
+        await this.prisma.vibePass.update({
+          where: { id: vibePassId },
+          data: {
+            sealedKey: encryptedResult.sealedKey,
+          },
+        });
+      }
+
+      // 获取合约调用参数
+      const mintCallParams = await this.agentNFTService.getMintCallParams(
+        aiModelData,
+        walletAddress,
+        encryptedResult
+      );
+
+      this.logger.log(`Mint parameters prepared successfully for VibePass ${vibePassId}`);
+
+      return {
+        ...mintCallParams,
+        metadata: {
+          rootHash: encryptedResult.rootHash,
+          sealedKey: encryptedResult.sealedKey,
+          proof: mintCallParams.params[0][0], // First proof from params
+          dataDescriptions: mintCallParams.params[1], // Data descriptions from params
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to prepare mint parameters: ${error.message}`);
+      throw new BadRequestException(`Failed to prepare mint parameters: ${error.message}`);
     }
   }
 }

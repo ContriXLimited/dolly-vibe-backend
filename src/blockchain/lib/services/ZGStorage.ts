@@ -166,7 +166,7 @@ export class ZGStorage implements IZGStorage {
     // Upload file with new API syntax and timeout
     console.log(`[OGStorage] Storing data of size ${data.length} bytes, rootHash: ${rootHash}`);
     
-    const timeoutMs = this.config.uploadTimeoutMs || 30000;
+    const timeoutMs = this.config.uploadTimeoutMs || 10000;
     console.log(`[OGStorage] Using upload timeout: ${timeoutMs}ms`);
 
     try {

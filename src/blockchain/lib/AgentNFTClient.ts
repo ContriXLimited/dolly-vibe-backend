@@ -398,4 +398,48 @@ export class AgentNFTClient {
   public getWallet(): ethers.Wallet {
     return this.wallet;
   }
+
+  /**
+   * Get mint contract call parameters without executing the transaction
+   * This method prepares all the parameters needed for the frontend to call the mint function
+   */
+  public async getMintCallParams(
+    aiModelData: AIModelData,
+    recipientAddress: string,
+    encryptedResult: EncryptedMetadataResult
+  ): Promise<{
+    params: any[];
+    proof: string;
+    dataDescriptions: string[];
+  }> {
+    try {
+      const to = recipientAddress || this.wallet.address;
+
+      // Generate preimage proof for the encrypted data
+      const proof = await this.generatePreimageProof(
+        encryptedResult.rootHash,
+        encryptedResult.encryptionKey!
+      );
+
+      // Prepare data descriptions
+      const dataDescriptions = [
+        `INFT: ${aiModelData.name || 'Dolly Vibe Agent'} - ${aiModelData.description || 'Intelligent NFT based on user profile'}`
+      ];
+
+      // Prepare mint function parameters (same as mint method)
+      const params = [
+        [proof],                // proofs for data correctness verification
+        dataDescriptions,       // human-readable data descriptions
+        to                      // recipient address
+      ];
+
+      return {
+        params,
+        proof,
+        dataDescriptions,
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to prepare mint call params: ${error.message}`);
+    }
+  }
 }

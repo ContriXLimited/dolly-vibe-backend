@@ -157,6 +157,69 @@ export class AgentNFTService {
   }
 
   /**
+   * Get mint contract call parameters without executing the transaction
+   * This method prepares all the data needed for frontend to call the mint function
+   */
+  async getMintCallParams(
+    aiModelData: AIModelData,
+    recipientAddress: string,
+    encryptedResult?: EncryptedMetadataResult
+  ): Promise<{
+    contractAddress: string;
+    methodName: string;
+    params: any[];
+    abi: any[];
+    to: string;
+    data: string;
+  }> {
+    try {
+      this.logger.log(`Preparing mint call params for recipient: ${recipientAddress}`);
+
+      // Validate recipient address
+      if (!ethers.isAddress(recipientAddress)) {
+        throw new BadRequestException('Invalid recipient address');
+      }
+
+      // Get contract address and ABI
+      const contractAddress = await this.agentNFTClient.getContract().getAddress();
+      const contractInterface = this.agentNFTClient.getContract().interface;
+
+      // Prepare encrypted result (either provided or generate new)
+      let finalEncryptedResult: EncryptedMetadataResult;
+      if (encryptedResult) {
+        finalEncryptedResult = encryptedResult;
+      } else {
+        // Upload metadata first
+        finalEncryptedResult = await this.agentNFTClient.makeMetadata(aiModelData, recipientAddress);
+      }
+
+      // Generate mint call parameters
+      const mintParams = await this.agentNFTClient.getMintCallParams(
+        aiModelData,
+        recipientAddress,
+        finalEncryptedResult
+      );
+
+      // Encode the function call data
+      const encodedData = contractInterface.encodeFunctionData('mint', mintParams.params);
+
+      this.logger.log(`Mint call params prepared successfully`);
+
+      return {
+        contractAddress,
+        methodName: 'mint',
+        params: mintParams.params,
+        abi: contractInterface.fragments.filter(fragment => fragment.type === 'function' && (fragment as any).name === 'mint'),
+        to: contractAddress,
+        data: encodedData,
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to prepare mint call params: ${error.message}`);
+      throw new BadRequestException(`Failed to prepare mint call params: ${error.message}`);
+    }
+  }
+
+  /**
    * Check if the service is ready
    */
   async isReady(): Promise<boolean> {

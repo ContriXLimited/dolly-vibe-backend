@@ -20,6 +20,7 @@ import { JoinProjectDto } from './dto/join-project.dto';
 import { MintInftDto } from './dto/mint-inft.dto';
 import { UploadMetadataDto } from './dto/upload-metadata.dto';
 import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
+import { GetMintParamsDto } from './dto/get-mint-params.dto';
 import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
@@ -100,6 +101,23 @@ export class VibePassController {
     return {
       message: 'Successfully minted INFT using uploaded metadata',
       data: vibePass,
+    };
+  }
+
+  @Post(':id/get-mint-params')
+  @ApiOperation({ summary: 'Get mint contract call parameters for frontend to execute transaction' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully prepared mint contract call parameters' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  @ApiResponse({ status: 409, description: 'INFT already minted' })
+  async getMintParams(
+    @Param('id') id: string,
+    @Body() dto: GetMintParamsDto,
+  ) {
+    const result = await this.vibePassService.getMintParams(id, dto);
+    return {
+      message: 'Successfully prepared mint contract call parameters',
+      data: result,
     };
   }
 
