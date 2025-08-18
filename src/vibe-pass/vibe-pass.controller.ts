@@ -21,6 +21,7 @@ import { MintInftDto } from './dto/mint-inft.dto';
 import { UploadMetadataDto } from './dto/upload-metadata.dto';
 import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
 import { GetMintParamsDto } from './dto/get-mint-params.dto';
+import { ConfirmMintDto } from './dto/confirm-mint.dto';
 import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
@@ -123,6 +124,24 @@ export class VibePassController {
     return {
       message: 'Successfully prepared mint contract call parameters',
       data: result,
+    };
+  }
+
+  @Post(':id/confirm-mint')
+  @ApiOperation({ summary: 'Confirm mint transaction and extract tokenId from transaction hash' })
+  @ApiParam({ name: 'id', description: 'VibePass ID' })
+  @ApiResponse({ status: 200, description: 'Successfully confirmed mint and updated VibePass with tokenId' })
+  @ApiResponse({ status: 404, description: 'VibePass not found' })
+  @ApiResponse({ status: 409, description: 'INFT already minted' })
+  @ApiResponse({ status: 400, description: 'Transaction not found or invalid' })
+  async confirmMint(
+    @Param('id') id: string,
+    @Body() dto: ConfirmMintDto,
+  ) {
+    const vibePass = await this.vibePassService.confirmMint(id, dto);
+    return {
+      message: 'Successfully confirmed mint and updated VibePass',
+      data: vibePass,
     };
   }
 

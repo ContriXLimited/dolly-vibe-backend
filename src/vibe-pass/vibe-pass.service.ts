@@ -14,6 +14,7 @@ import { MintInftDto } from './dto/mint-inft.dto';
 import { UploadMetadataDto } from './dto/upload-metadata.dto';
 import { MintWithMetadataDto } from './dto/mint-with-metadata.dto';
 import { GetMintParamsDto } from './dto/get-mint-params.dto';
+import { ConfirmMintDto } from './dto/confirm-mint.dto';
 import { QueryVibePassDto } from './dto/query-vibe-pass.dto';
 import { VibePass, VibePassStatus, User, VibeUser } from '@prisma/client';
 import { AIModelData, EncryptedMetadataResult } from '@/blockchain/lib/types';
@@ -638,6 +639,53 @@ export class VibePassService {
     } catch (error) {
       this.logger.error(`Failed to prepare mint parameters: ${error.message}`);
       throw new BadRequestException(`Failed to prepare mint parameters: ${error.message}`);
+    }
+  }
+
+  /**
+   * Confirm mint transaction and extract tokenId from transaction hash
+   */
+  async confirmMint(vibePassId: string, dto: ConfirmMintDto): Promise<VibePass> {
+    const { txHash, rootHash, sealedKey } = dto;
+
+    // 验证 VibePass 是否存在
+    const vibePass = await this.prisma.vibePass.findUnique({
+      where: { id: vibePassId },
+    });
+
+    if (!vibePass) {
+      throw new NotFoundException(`VibePass with ID ${vibePassId} not found`);
+    }
+
+    // 检查是否已经铸造
+    if (vibePass.tokenId) {
+      throw new ConflictException('INFT has already been minted for this VibePass');
+    }
+
+    this.logger.log(`Confirming mint transaction for VibePass ${vibePassId} with txHash: ${txHash}`);
+
+    try {
+      // 使用 AgentNFTService 从交易哈希中提取 tokenId
+      const tokenId = await this.agentNFTService.getTokenIdFromTransaction(txHash);
+
+      // 更新 VibePass 记录
+      const updatedVibePass = await this.prisma.vibePass.update({
+        where: { id: vibePassId },
+        data: {
+          tokenId: tokenId.toString(),
+          mintTxHash: txHash,
+          rootHash: rootHash,
+          sealedKey: sealedKey,
+          mintedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Mint confirmed successfully for VibePass ${vibePassId} - Token ID: ${tokenId}, TX: ${txHash}`);
+
+      return this.serializeVibePassJsonFields(updatedVibePass);
+    } catch (error) {
+      this.logger.error(`Failed to confirm mint: ${error.message}`);
+      throw new BadRequestException(`Failed to confirm mint: ${error.message}`);
     }
   }
 }

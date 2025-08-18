@@ -220,6 +220,49 @@ export class AgentNFTService {
   }
 
   /**
+   * Get tokenId from transaction hash by parsing the transaction receipt
+   */
+  async getTokenIdFromTransaction(txHash: string): Promise<number> {
+    try {
+      this.logger.log(`Extracting tokenId from transaction: ${txHash}`);
+
+      // Get transaction receipt
+      const provider = new ethers.JsonRpcProvider(this.blockchainConfig.getBlockchainConfig().rpcUrl);
+      const receipt = await provider.getTransactionReceipt(txHash);
+
+      if (!receipt) {
+        throw new BadRequestException('Transaction not found or not yet confirmed');
+      }
+
+      if (receipt.status !== 1) {
+        throw new BadRequestException('Transaction failed');
+      }
+
+      // Parse logs to find Minted event
+      const contractInterface = this.agentNFTClient.getContract().interface;
+      
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = contractInterface.parseLog(log);
+          if (parsedLog && parsedLog.name === 'Minted') {
+            const tokenId = Number(parsedLog.args._tokenId || parsedLog.args.tokenId);
+            this.logger.log(`Successfully extracted tokenId: ${tokenId} from transaction: ${txHash}`);
+            return tokenId;
+          }
+        } catch (parseError) {
+          // Skip logs that can't be parsed by this contract
+          continue;
+        }
+      }
+
+      throw new BadRequestException('Minted event not found in transaction logs');
+    } catch (error: any) {
+      this.logger.error(`Failed to extract tokenId from transaction: ${error.message}`);
+      throw new BadRequestException(`Failed to extract tokenId from transaction: ${error.message}`);
+    }
+  }
+
+  /**
    * Check if the service is ready
    */
   async isReady(): Promise<boolean> {
