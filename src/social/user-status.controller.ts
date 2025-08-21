@@ -158,8 +158,8 @@ export class UserStatusController {
 
   @Get('status-by-wallet')
   @ApiOperation({ 
-    summary: '根据Wallet地址获取用户完整状态（实时检查Discord和Twitter关注状态）',
-    description: '此接口会自动检查用户的Discord频道关注状态和Twitter关注状态，如果发现状态变化会自动更新数据库'
+    summary: '根据Wallet地址获取用户完整状态',
+    description: '此接口返回用户的连接状态，支持可选的Discord和Twitter实时检查。默认启用Discord检查，可通过参数控制'
   })
   @ApiResponse({ 
     status: 200, 
@@ -186,7 +186,7 @@ export class UserStatusController {
                 connected: { type: 'boolean', example: true },
                 username: { type: 'string', example: 'user#1234' },
                 userId: { type: 'string', example: '123456789' },
-                isJoined: { type: 'boolean', example: true, description: '是否加入Discord服务器（已实时检查）' },
+                isJoined: { type: 'boolean', example: true, description: '是否加入Discord服务器（可能已实时检查）' },
                 connectedAt: { type: 'string', format: 'date-time' }
               }
             },
@@ -196,7 +196,7 @@ export class UserStatusController {
                 connected: { type: 'boolean', example: true },
                 username: { type: 'string', example: 'dollyuser' },
                 userId: { type: 'string', example: '987654321' },
-                isFollowed: { type: 'boolean', example: true, description: '是否关注Dolly Twitter（已实时检查）' },
+                isFollowed: { type: 'boolean', example: true, description: '是否关注Dolly Twitter（可能已实时检查）' },
                 connectedAt: { type: 'string', format: 'date-time' }
               }
             },
@@ -211,7 +211,7 @@ export class UserStatusController {
             overall: {
               type: 'object',
               properties: {
-                allConnected: { type: 'boolean', example: true, description: '所有连接是否完成（实时更新）' },
+                allConnected: { type: 'boolean', example: true, description: '所有连接是否完成' },
                 completedAt: { type: 'string', format: 'date-time' },
                 canProceed: { type: 'boolean', example: true, description: '是否可以点击Let\'s Vibe按钮' }
               }
@@ -222,7 +222,7 @@ export class UserStatusController {
           type: 'object',
           properties: {
             discordChecked: { type: 'boolean', example: true, description: '是否进行了Discord实时检查' },
-            twitterChecked: { type: 'boolean', example: true, description: '是否进行了Twitter实时检查' },
+            twitterChecked: { type: 'boolean', example: false, description: '是否进行了Twitter实时检查' },
             statusUpdated: { type: 'boolean', example: false, description: '状态是否有更新' }
           }
         }
@@ -240,14 +240,21 @@ export class UserStatusController {
     example: '0x1234567890123456789012345678901234567890'
   })
   @ApiQuery({ 
-    name: 'skipRealTimeCheck', 
+    name: 'enableDiscordCheck', 
     required: false, 
-    description: '跳过实时检查，仅返回数据库中的状态（默认false）',
+    description: '启用Discord实时检查（默认true）',
+    example: true
+  })
+  @ApiQuery({ 
+    name: 'enableTwitterCheck', 
+    required: false, 
+    description: '启用Twitter实时检查（默认false）',
     example: false
   })
   async getUserStatusByWallet(
     @Query('walletAddress') walletAddress: string,
-    @Query('skipRealTimeCheck') skipRealTimeCheck?: string,
+    @Query('enableDiscordCheck') enableDiscordCheck?: string,
+    @Query('enableTwitterCheck') enableTwitterCheck?: string,
   ): Promise<{ 
     vibeUserId: string; 
     walletAddress: string; 
@@ -267,27 +274,32 @@ export class UserStatusController {
       walletAddress,
     });
 
-    // 根据参数决定是否进行实时检查
-    const shouldSkipCheck = skipRealTimeCheck === 'true';
+    // 根据参数决定是否进行实时检查，默认启用Discord检查
+    const shouldEnableDiscordCheck = enableDiscordCheck !== 'false'; // 默认true，除非明确传false
+    const shouldEnableTwitterCheck = enableTwitterCheck === 'true'; // 默认false，需要明确传true
     
-    if (shouldSkipCheck) {
-      // 只获取数据库中的状态，不进行实时检查
-      const status = await this.userStatusService.getUserStatus(vibeUserId);
-      return { vibeUserId, walletAddress, status };
-    } else {
-      // 获取用户状态并进行实时检查
-      const status = await this.userStatusService.getUserStatusWithRealTimeCheck(vibeUserId);
+    if (shouldEnableDiscordCheck || shouldEnableTwitterCheck) {
+      // 获取用户状态并进行指定的实时检查
+      const status = await this.userStatusService.getUserStatusWithCustomChecks(
+        vibeUserId, 
+        shouldEnableDiscordCheck, 
+        shouldEnableTwitterCheck
+      );
       
       return { 
         vibeUserId, 
         walletAddress, 
         status,
         realTimeChecks: {
-          discordChecked: status.discord.connected && !!status.discord.userId,
-          twitterChecked: status.twitter.connected && !!status.twitter.userId,
+          discordChecked: shouldEnableDiscordCheck && status.discord.connected && !!status.discord.userId,
+          twitterChecked: shouldEnableTwitterCheck && status.twitter.connected && !!status.twitter.userId,
           statusUpdated: true // 这里简化了，实际可以从service中返回更详细的信息
         }
       };
+    } else {
+      // 只获取数据库中的状态，不进行实时检查
+      const status = await this.userStatusService.getUserStatus(vibeUserId);
+      return { vibeUserId, walletAddress, status };
     }
   }
 

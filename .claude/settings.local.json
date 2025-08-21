@@ -10,7 +10,8 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(npm run openapi:generate:*)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(npm run prisma:generate:*)"
     ],
     "deny": []
   }

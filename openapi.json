@@ -1521,8 +1521,8 @@
     "/auth/user/status-by-wallet": {
       "get": {
         "operationId": "UserStatusController_getUserStatusByWallet",
-        "summary": "根据Wallet地址获取用户完整状态（实时检查Discord和Twitter关注状态）",
-        "description": "此接口会自动检查用户的Discord频道关注状态和Twitter关注状态，如果发现状态变化会自动更新数据库",
+        "summary": "根据Wallet地址获取用户完整状态",
+        "description": "此接口返回用户的连接状态，支持可选的Discord和Twitter实时检查。默认启用Discord检查，可通过参数控制",
         "parameters": [
           {
             "name": "walletAddress",
@@ -1535,10 +1535,20 @@
             }
           },
           {
-            "name": "skipRealTimeCheck",
+            "name": "enableDiscordCheck",
             "required": false,
             "in": "query",
-            "description": "跳过实时检查，仅返回数据库中的状态（默认false）",
+            "description": "启用Discord实时检查（默认true）",
+            "schema": {
+              "example": true,
+              "type": "string"
+            }
+          },
+          {
+            "name": "enableTwitterCheck",
+            "required": false,
+            "in": "query",
+            "description": "启用Twitter实时检查（默认false）",
             "schema": {
               "example": false,
               "type": "string"
@@ -1584,7 +1594,7 @@
                             "isJoined": {
                               "type": "boolean",
                               "example": true,
-                              "description": "是否加入Discord服务器（已实时检查）"
+                              "description": "是否加入Discord服务器（可能已实时检查）"
                             },
                             "connectedAt": {
                               "type": "string",
@@ -1610,7 +1620,7 @@
                             "isFollowed": {
                               "type": "boolean",
                               "example": true,
-                              "description": "是否关注Dolly Twitter（已实时检查）"
+                              "description": "是否关注Dolly Twitter（可能已实时检查）"
                             },
                             "connectedAt": {
                               "type": "string",
@@ -1641,7 +1651,7 @@
                             "allConnected": {
                               "type": "boolean",
                               "example": true,
-                              "description": "所有连接是否完成（实时更新）"
+                              "description": "所有连接是否完成"
                             },
                             "completedAt": {
                               "type": "string",
@@ -1666,7 +1676,7 @@
                         },
                         "twitterChecked": {
                           "type": "boolean",
-                          "example": true,
+                          "example": false,
                           "description": "是否进行了Twitter实时检查"
                         },
                         "statusUpdated": {
@@ -2068,6 +2078,55 @@
         "responses": {
           "200": {
             "description": "Successfully prepared mint contract call parameters"
+          },
+          "404": {
+            "description": "VibePass not found"
+          },
+          "409": {
+            "description": "INFT already minted"
+          }
+        },
+        "tags": [
+          "VibePass Management"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/vibe-passes/{id}/confirm-mint": {
+      "post": {
+        "operationId": "VibePassController_confirmMint",
+        "summary": "Confirm mint transaction and extract tokenId from transaction hash",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "VibePass ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmMintDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully confirmed mint and updated VibePass with tokenId"
+          },
+          "400": {
+            "description": "Transaction not found or invalid"
           },
           "404": {
             "description": "VibePass not found"
@@ -3145,6 +3204,31 @@
           "rootHash",
           "nonce",
           "signature"
+        ]
+      },
+      "ConfirmMintDto": {
+        "type": "object",
+        "properties": {
+          "txHash": {
+            "type": "string",
+            "description": "Transaction hash of the mint transaction",
+            "example": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+          },
+          "rootHash": {
+            "type": "string",
+            "description": "Root hash that was used for minting",
+            "example": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+          },
+          "sealedKey": {
+            "type": "string",
+            "description": "Sealed key that was used for minting",
+            "example": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+          }
+        },
+        "required": [
+          "txHash",
+          "rootHash",
+          "sealedKey"
         ]
       },
       "CreateProfileUpdateDto": {
