@@ -1,165 +1,165 @@
 # Dolly Vibe Backend
 
-Dolly Vibe 平台的综合 NestJS 后端应用程序，具备区块链集成、用户认证、NFT 管理和社交功能。
+A comprehensive NestJS backend application for the Dolly Vibe platform, featuring blockchain integration, user authentication, NFT management, and social features.
 
-## 🚀 功能特性
+## 🚀 Features
 
-- **用户管理**: 完整的用户注册、认证和个人资料管理
-- **区块链集成**: Web3 钱包连接和区块链交互
-- **NFT 系统**: Vibe Pass 铸造、iNFT（智能身份资产化）管理、元数据管理和 NFT 操作
-- **社交功能**: Discord 和 Twitter OAuth 集成
-- **排行榜系统**: 用户评分和排名功能
-- **个人资料更新**: 动态个人资料更新跟踪和评分
-- **健康监控**: 应用程序健康检查和监控
-- **API 文档**: 全面的 OpenAPI/Swagger 文档
+- **User Management**: Complete user registration, authentication, and profile management
+- **Blockchain Integration**: Web3 wallet connectivity and blockchain interactions
+- **NFT System**: Vibe Pass minting, iNFT (Identity Asset) management, metadata management, and NFT operations
+- **Social Features**: Discord and Twitter OAuth integration
+- **Leaderboard System**: User scoring and ranking functionality
+- **Profile Updates**: Dynamic profile update tracking and scoring
+- **Health Monitoring**: Application health checks and monitoring
+- **API Documentation**: Comprehensive OpenAPI/Swagger documentation
 
-## 🛠️ 技术栈
+## 🛠️ Tech Stack
 
-- **框架**: NestJS 10.x
-- **数据库**: PostgreSQL 配合 Prisma ORM
-- **缓存**: Redis
-- **认证**: JWT + Passport
-- **区块链**: Ethers.js + 0G Labs SDK + iNFT（ERC-7857）智能合约集成
-- **文档**: Swagger/OpenAPI
-- **测试**: Jest
-- **语言**: TypeScript
+- **Framework**: NestJS 10.x
+- **Database**: PostgreSQL with Prisma ORM
+- **Cache**: Redis
+- **Authentication**: JWT + Passport
+- **Blockchain**: Ethers.js + 0G Labs SDK + iNFT (ERC-7857) smart contract integration
+- **Documentation**: Swagger/OpenAPI
+- **Testing**: Jest
+- **Language**: TypeScript
 
-## 📦 核心模块
+## 📦 Core Modules
 
-### 认证与授权
-- 基于 JWT 的认证
-- 基于角色的访问控制（管理员、用户）
-- 钱包签名验证
-- 社交 OAuth（Discord、Twitter）
+### Authentication & Authorization
+- JWT-based authentication
+- Role-based access control (Admin, User)
+- Wallet signature verification
+- Social OAuth (Discord, Twitter)
 
-### 区块链集成
-- 通过 Ethers.js 进行智能合约交互
-- Agent NFT 管理和 iNFT（智能身份资产化）支持
-- 用户链上行为、社区贡献、社交互动数据与 NFT 集成
-- 元数据加密和存储服务
-- NFT 转移管理
-- 0G Labs 去中心化存储集成
+### Blockchain Integration
+- Smart contract interactions via Ethers.js
+- Agent NFT management and iNFT (Identity Asset) support
+- User on-chain behavior, community contributions, and social interactions data integration with NFTs
+- Metadata encryption and storage services
+- NFT transfer management
+- 0G Labs decentralized storage integration
 
-### 用户功能
-- 用户个人资料管理
-- 钱包连接和验证
-- 社交账户链接
-- 活动跟踪和评分
+### User Features
+- User profile management
+- Wallet connection and verification
+- Social account linking
+- Activity tracking and scoring
 
-### NFT 系统（Vibe Pass & iNFT）
-- **Vibe Pass**: 带元数据的 NFT 铸造和项目加入功能
-- **iNFT（智能身份资产化）**: 基于 ERC-7857 标准的智能身份 NFT
-  - 将用户链上行为、社区贡献、社交互动转化为可验证的数字身份资产
-  - 构建可携带、可交易的身份信誉系统
-- Agent NFT 客户端，支持身份数据元数据管理
-- 加密元数据存储和传输
-- 铸造参数生成和签名验证
-- 元数据上传到 0G Labs 去中心化存储
+### NFT System (Vibe Pass & iNFT)
+- **Vibe Pass**: NFT minting with metadata and project joining functionality
+- **iNFT (Identity Asset)**: Smart identity NFTs based on ERC-7857 standard
+  - Transform user on-chain behavior, community contributions, and social interactions into verifiable digital identity assets
+  - Build portable and tradeable identity reputation system
+- Agent NFT client with identity data metadata management
+- Encrypted metadata storage and transmission
+- Mint parameter generation and signature verification
+- Metadata upload to 0G Labs decentralized storage
 
-### 排行榜与评分
-- 用户排名系统
-- 分数计算和跟踪
-- 带分页的排行榜查询
-- 成就跟踪
+### Leaderboard & Scoring
+- User ranking system
+- Score calculation and tracking
+- Leaderboard queries with pagination
+- Achievement tracking
 
-## 🏗️ 项目结构
+## 🏗️ Project Structure
 
 ```
 src/
-├── auth/                 # 认证和授权
-├── blockchain/           # Web3 和智能合约集成
-├── common/              # 共享工具和模块
-│   ├── decorators/      # 自定义装饰器
-│   ├── guards/          # 路由守卫
-│   ├── prisma/          # 数据库服务
-│   └── redis/           # 缓存服务
-├── health/              # 健康检查端点
-├── leaderboard/         # 用户排名系统
-├── profile-update/      # 个人资料更新跟踪
-├── social/              # 社交 OAuth 集成
-├── vibe-pass/           # Vibe Pass 和 iNFT 铸造管理
-├── vibe-user/           # 用户管理
-└── wallet/              # 钱包验证
+├── auth/                 # Authentication & authorization
+├── blockchain/           # Web3 & smart contract integration
+├── common/              # Shared utilities & modules
+│   ├── decorators/      # Custom decorators
+│   ├── guards/          # Route guards
+│   ├── prisma/          # Database service
+│   └── redis/           # Cache service
+├── health/              # Health check endpoints
+├── leaderboard/         # User ranking system
+├── profile-update/      # Profile update tracking
+├── social/              # Social OAuth integration
+├── vibe-pass/           # Vibe Pass and iNFT minting & management
+├── vibe-user/           # User management
+└── wallet/              # Wallet verification
 ```
 
-## 🚦 快速开始
+## 🚦 Getting Started
 
-### 前置要求
+### Prerequisites
 
 - Node.js 18+
 - PostgreSQL
 - Redis
 - npm/pnpm/yarn
 
-### 安装
+### Installation
 
-1. 克隆仓库
+1. Clone the repository
 ```bash
 git clone <repository-url>
 cd dolly-vibe-backend
 ```
 
-2. 安装依赖
+2. Install dependencies
 ```bash
 npm install
 ```
 
-3. 设置环境变量
+3. Set up environment variables
 ```bash
 cp .env.example .env
-# 编辑 .env 文件配置
+# Edit .env with your configuration
 ```
 
-4. 设置数据库
+4. Set up the database
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 ```
 
-5. 启动开发服务器
+5. Start the development server
 ```bash
 npm run start:dev
 ```
 
-服务器将在 `http://localhost:3000` 可用
+The server will be available at `http://localhost:3000`
 
-## 📚 可用脚本
+## 📚 Available Scripts
 
-### 开发
-- `npm run start:dev` - 以开发模式启动（热重载）
-- `npm run start:debug` - 以调试模式启动
-- `npm run build` - 构建应用程序
-- `npm run start:prod` - 以生产模式启动
+### Development
+- `npm run start:dev` - Start in development mode with hot reload
+- `npm run start:debug` - Start in debug mode
+- `npm run build` - Build the application
+- `npm run start:prod` - Start in production mode
 
-### 数据库
-- `npm run prisma:generate` - 生成 Prisma 客户端
-- `npm run prisma:migrate` - 运行数据库迁移
-- `npm run prisma:studio` - 打开 Prisma Studio
-- `npm run prisma:seed` - 填充数据库
+### Database
+- `npm run prisma:generate` - Generate Prisma client
+- `npm run prisma:migrate` - Run database migrations
+- `npm run prisma:studio` - Open Prisma Studio
+- `npm run prisma:seed` - Seed the database
 
-### 测试
-- `npm run test` - 运行单元测试
-- `npm run test:watch` - 以监视模式运行测试
-- `npm run test:cov` - 运行带覆盖率的测试
-- `npm run test:e2e` - 运行端到端测试
+### Testing
+- `npm run test` - Run unit tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:cov` - Run tests with coverage
+- `npm run test:e2e` - Run end-to-end tests
 
-### 代码质量
-- `npm run lint` - 运行 ESLint
-- `npm run format` - 使用 Prettier 格式化代码
+### Code Quality
+- `npm run lint` - Run ESLint
+- `npm run format` - Format code with Prettier
 
-### 文档与工具
-- `npm run openapi:generate` - 生成 OpenAPI 文档
-- `npm run db:test` - 测试数据库连接
-- `npm run script:create-vibe-project` - 创建 vibe 项目
+### Documentation & Tools
+- `npm run openapi:generate` - Generate OpenAPI documentation
+- `npm run db:test` - Test database connection
+- `npm run script:create-vibe-project` - Create vibe project
 
-## 🔧 配置
+## 🔧 Configuration
 
-### 环境变量
+### Environment Variables
 
-需要配置的关键环境变量：
+Key environment variables to configure:
 
 ```bash
-# 数据库
+# Database
 DATABASE_URL="postgresql://..."
 
 # Redis
@@ -168,11 +168,11 @@ REDIS_URL="redis://..."
 # JWT
 JWT_SECRET="your-secret-key"
 
-# 区块链
+# Blockchain
 ETHEREUM_RPC_URL="..."
 CONTRACT_ADDRESS="..."
 
-# 社交 OAuth
+# Social OAuth
 DISCORD_CLIENT_ID="..."
 DISCORD_CLIENT_SECRET="..."
 TWITTER_CONSUMER_KEY="..."
@@ -182,87 +182,87 @@ TWITTER_CONSUMER_SECRET="..."
 ZG_STORAGE_URL="..."
 ```
 
-## 📖 API 文档
+## 📖 API Documentation
 
-应用程序运行后，可以访问：
+Once the application is running, you can access:
 
 - **Swagger UI**: `http://localhost:3000/api`
 - **OpenAPI JSON**: `http://localhost:3000/api-json`
-- **OpenAPI YAML**: 项目根目录的 `openapi.yaml` 文件
+- **OpenAPI YAML**: Available in the project root as `openapi.yaml`
 
-## 🔐 安全功能
+## 🔐 Security Features
 
-- 可配置过期时间的 JWT 认证
-- 基于角色的访问控制（RBAC）
-- 钱包签名验证
-- 使用 class-validator 进行输入验证
-- 速率限制和安全头
-- 环境变量验证
+- JWT authentication with configurable expiration
+- Role-based access control (RBAC)
+- Wallet signature verification
+- Input validation with class-validator
+- Rate limiting and security headers
+- Environment variable validation
 
-## 🐳 Docker 支持
+## 🐳 Docker Support
 
-项目包含多个 Dockerfile 配置：
+The project includes multiple Dockerfile configurations:
 
-- `Dockerfile` - 标准生产构建
-- `Dockerfile.optimized` - 针对更小镜像大小优化
-- `Dockerfile.debug` - 支持调试的构建
-- `docker-compose.yml` - 完整的开发环境
+- `Dockerfile` - Standard production build
+- `Dockerfile.optimized` - Optimized for smaller image size
+- `Dockerfile.debug` - Debug-enabled build
+- `docker-compose.yml` - Complete development environment
 
 ```bash
-# 使用 Docker Compose 构建和运行
+# Build and run with Docker Compose
 docker-compose up -d
 ```
 
-## 🧪 测试
+## 🧪 Testing
 
-### 运行测试
+### Running Tests
 
 ```bash
-# 单元测试
+# Unit tests
 npm run test
 
-# 端到端测试
+# E2E tests
 npm run test:e2e
 
-# 测试覆盖率
+# Test coverage
 npm run test:cov
 ```
 
-### 测试结构
+### Test Structure
 
-- 单元测试：`src/**/*.spec.ts`
-- 端到端测试：`test/**/*.e2e-spec.ts`
-- 测试工具：`test/` 目录
+- Unit tests: `src/**/*.spec.ts`
+- E2E tests: `test/**/*.e2e-spec.ts`
+- Test utilities: `test/` directory
 
-## 📁 演示示例
+## 📁 Demo Examples
 
-项目在 `example/` 目录中包含 HTML 演示：
+The project includes HTML demos in the `example/` directory:
 
-- `vibe-pass-demo.html` - Vibe Pass 铸造演示
-- `profile-update-demo.html` - 个人资料更新功能
-- `three-step-mint-demo.html` - 三步铸造流程
+- `vibe-pass-demo.html` - Vibe Pass minting demo
+- `profile-update-demo.html` - Profile update functionality
+- `three-step-mint-demo.html` - Three-step minting process
 
-## 🤝 贡献
+## 🤝 Contributing
 
-1. Fork 仓库
-2. 创建功能分支
-3. 进行更改
-4. 为新功能添加测试
-5. 确保所有测试通过
-6. 提交 pull request
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
-## 📄 许可证
+## 📄 License
 
 ISC License
 
-## 🆘 支持
+## 🆘 Support
 
-有关支持和故障排除，请参考：
+For support and troubleshooting, refer to:
 
-- `TROUBLESHOOTING.md` - 常见问题和解决方案
-- `API_CHANGES.md` - API 更改文档
-- `DEPLOYMENT.md` - 部署指南
+- `TROUBLESHOOTING.md` - Common issues and solutions
+- `API_CHANGES.md` - API change documentation
+- `DEPLOYMENT.md` - Deployment guidelines
 
 ---
 
-使用 NestJS 和现代 Web 技术构建 ❤️
+Built with ❤️ using NestJS and modern web technologies.
